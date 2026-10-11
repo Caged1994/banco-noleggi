@@ -2,7 +2,7 @@ import { S, ui } from '../core/state.js';
 import { CATS, H, KASKO, PROBS, SVC, SVC_KEYS, ZONES, ZONE_KEYS } from '../data/catalog.js';
 import { svcBlock, svcPrice } from '../sim/services.js';
 import { eur } from '../core/util.js';
-import { insCar, intLabel, zoneChance, zoneSure } from '../sim/inspection.js';
+import { dmgIn, foundDmgs, insCar, intLabel, zoneChance, zoneSure } from '../sim/inspection.js';
 import { dmgLabel, openDmgs, zoneOld } from '../sim/fleet.js';
 import { PLAYER_TIME } from '../sim/staff.js';
 import { bestSeller, sellMul } from '../sim/crew.js';
@@ -46,7 +46,7 @@ export function carSvg(it){
   }
   const car=insCar(it);
   if(car)openDmgs(car).filter(d=>d.zone!=='int').forEach(d=>marks+=dmgIcon(d,'var(--muted)',1.5));
-  if(it.dmg&&it.zones[it.dmg.zone].st==='found')marks+=dmgIcon(it.dmg,'var(--bad)',2.4);
+  foundDmgs(it).forEach(d=>marks+=dmgIcon(d,'var(--bad)',2.4));
   const fill={none:'',ok:'var(--good-bg)',unsure:'var(--warn-bg)',found:'var(--bad-bg)'};
   const zones=ZONE_KEYS.map(k=>{const z=ZONES[k],st=it.zones[k].st;
     return `<rect class="zone${sel===k?' sel':''}" data-ins="${it.id}" data-z="${k}" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="6" ${fill[st]?`style="fill:${fill[st]};fill-opacity:.75"`:''}><title>${z.nome}</title></rect>`}).join('');
@@ -70,7 +70,7 @@ export function renderIns(){
     const found=ZONE_KEYS.some(x=>it.zones[x].st==='found');
     const checked=ZONE_KEYS.filter(x=>it.zones[x].st!=='none').length;
     let side;
-    const car=insCar(it),old=k&&car?zoneOld(car,k):0,nf=it.dmg&&it.zones[it.dmg.zone].st==='found'?it.dmg:null;
+    const car=insCar(it),old=k&&car?zoneOld(car,k):0,nf=k&&it.zones[k].st==='found'?dmgIn(it,k):null;
     if(!z)side=`<p>Tocca una zona dello schema per ispezionarla. Lo sporco (macchie marroni) e i danni vecchi non riparati (in grigio) rendono più difficile vedere un danno nuovo.</p>`;
     else side=`<div class="zsel">${ZONES[k].nome}${z.dirty?' · sporca':''}${old?` · ${old} dann${old>1?'i':'o'} vecch${old>1?'i':'io'}`:''}</div><p>${ST_TXT[z.st]}${nf&&nf.zone===k?`: <b>${dmgLabel(nf)}</b>, listino ${eur(nf.cost)}`:''}</p>
       ${z.last?`<div class="reply">${z.last}</div>`:''}
@@ -87,9 +87,9 @@ export function renderIns(){
           <div style="border-top:1px solid var(--line);padding-top:8px;display:grid;gap:6px">
             <div class="introw"><span><b>Interni</b> · ${!it.int||it.int.st==='none'?'da controllare':it.int.cond==='ok'?'<span style="color:var(--good)">puliti e in ordine</span>':`<span style="color:var(--bad)">${intLabel(it.int).toLowerCase()} · ${eur(it.int.cost)}</span>`}</span>
               ${it.int&&it.int.st==='none'?`<button data-a="iint" data-id="${it.id}" ${S.time<1?'disabled':''}>Controlla interni · 1 tempo</button>`:''}</div>
-            <span class="lbl">${checked}/${ZONE_KEYS.length} zone ispezionate</span>
-            <div class="req-act"><button class="pri" data-a="iclose" data-id="${it.id}">${(()=>{const t=(found&&!it.kasko?it.dmg.cost:0)+(it.int&&it.int.st==='checked'&&it.int.cond!=='ok'?it.int.cost:0);return t?`Chiudi e addebita ${eur(t)}`:found?'Chiudi · danno coperto':'Chiudi ispezione'})()}</button></div>
-            <p style="font-size:12px">Un danno non trovato si scopre dopo e non è più addebitabile. Le ispezioni aperte si chiudono da sole a fine giornata.</p>
+            <span class="lbl">${checked}/${ZONE_KEYS.length} zone ispezionate${(n=>n?` · ${n} dann${n>1?'i':'o'} nuov${n>1?'i':'o'} trovat${n>1?'i':'o'}`:'')(foundDmgs(it).length)}</span>
+            <div class="req-act"><button class="pri" data-a="iclose" data-id="${it.id}">${(()=>{const t=(!it.kasko?foundDmgs(it).reduce((a,d)=>a+d.cost,0):0)+(it.int&&it.int.st==='checked'&&it.int.cond!=='ok'?it.int.cost:0);return t?`Chiudi e addebita ${eur(t)}`:found?'Chiudi · danno coperto':'Chiudi ispezione'})()}</button></div>
+            <p style="font-size:12px">Un'auto può tornare con più danni nuovi, in zone diverse: un danno non trovato si scopre dopo e non è più addebitabile. Le ispezioni aperte si chiudono da sole a fine giornata.</p>
           </div>
         </div>
       </div></article>`}).join('');

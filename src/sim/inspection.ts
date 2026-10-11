@@ -13,15 +13,26 @@ export function newInspection(c,b){
   const zones={};ZONE_KEYS.forEach(k=>zones[k]={dirty:false,st:'none',checks:0,esc:1,last:''});
   const nd=clamp(Math.round(R(1,2.4)+b.days/4),1,4);
   [...ZONE_KEYS].sort(()=>Math.random()-.5).slice(0,nd).forEach(k=>zones[k].dirty=true);
-  const dmg=Math.random()<clamp(.2+b.days*.02,.2,.36)?rollDamage(c.cat):null;
+  // danni nuovi: il primo con il 16% + 1,6% per giorno (max 29%); ognuno dei successivi con il 18% + 1,5% per giorno
+  // (max 30%, +15% se il cliente ha l'assicurazione totale), fino a 3, sempre in zone diverse
+  const dmgs=[];
+  if(Math.random()<clamp(.16+b.days*.016,.16,.29)){
+    const pool=[...ZONE_KEYS].sort(()=>Math.random()-.5);
+    dmgs.push(rollDamage(c.cat,pool.pop()));
+    const more=clamp(.18+b.days*.015,.18,.3)*(b.svc.includes('kasko')?1.15:1);
+    while(dmgs.length<3&&Math.random()<more)dmgs.push(rollDamage(c.cat,pool.pop()));
+  }
   // interni: molto sporchi o rovinati (più probabile con famiglie e noleggi lunghi)
   const fam=b.type==='famiglia'?1.6:1,ri=Math.random();let int:any={cond:'ok',st:'none'};
   if(ri<.05*fam)int={cond:'rovinati',sev:Math.random()<.25?'grave':'lieve',st:'none'};
   else if(ri<(.05+.13+b.days*.01)*fam)int={cond:'sporchi',st:'none'};
   int.cost=int.cond==='sporchi'?Math.round(CLEAN_INT*DMG_CAT[c.cat]/5)*5:int.cond==='rovinati'?dmgCost(c.cat,'interni',int.sev,'int'):0;
-  S.ins.push({id:S.nid++,car:c.id,plate:c.plate,model:c.model,cat:c.cat,cust:b.cust,cid:b.cid,kasko:b.svc.includes('kasko'),dmg,zones,int,acted:false});
+  S.ins.push({id:S.nid++,car:c.id,plate:c.plate,model:c.model,cat:c.cat,cust:b.cust,cid:b.cid,kasko:b.svc.includes('kasko'),dmgs,zones,int,acted:false});
 }
 export const insCar=it=>S.fleet.find(c=>c.id===it.car);
+// danno nuovo in una zona (al massimo uno per zona) e danni già trovati
+export const dmgIn=(it,k)=>it.dmgs.find(d=>d.zone===k)||null;
+export const foundDmgs=it=>it.dmgs.filter(d=>it.zones[d.zone].st==='found');
 // probabilità di trovare un danno nuovo nella zona: cala con lo sporco e con i danni vecchi non riparati
 // by: dipendente che controlla (null = il giocatore). Livello, attitudine e tratti cambiano la probabilità.
 export function zoneChance(it,k,dirtyOverride?,by?){
@@ -42,10 +53,10 @@ export function insCheck(id,k,wash,by=null){
   if(by)useTime(by,cost);else S.time-=cost;
   it.acted=true;
   if(wash)z.dirty=false;
-  const pr=zoneChance(it,k,undefined,by),hit=it.dmg&&it.dmg.zone===k&&Math.random()<pr;
+  const d=dmgIn(it,k),pr=zoneChance(it,k,undefined,by),hit=d&&Math.random()<pr;
   z.checks=(z.checks||0)+1;
   const who=by?`Primo controllo di ${by.name.split(' ')[0]}`:wash?'Pulita e controllata':'Controllo '+z.checks;
-  if(hit){z.st='found';z.last=`${who}: trovato ${dmgLabel(it.dmg).toLowerCase()}, listino ${eur(it.dmg.cost)}.`;return}
+  if(hit){z.st='found';z.last=`${who}: trovato ${dmgLabel(d).toLowerCase()}, listino ${eur(d.cost)}. Possono essercene altri nelle altre zone.`;return}
   z.esc=(z.esc??1)*(1-pr);
   const old=insCar(it)?zoneOld(insCar(it),k):0;
   z.st=(z.dirty||old)?'unsure':'ok';
@@ -63,9 +74,9 @@ export const intLabel=i=>i.cond==='sporchi'?'Pulizia interna straordinaria':`Int
 export function insGamble(id,k){
   const it=S.ins.find(x=>x.id===id);if(!it||it.zones[k].st!=='unsure')return;
   it.acted=true;
-  if(it.dmg&&it.dmg.zone===k){it.zones[k].st='found';insClose(id)}
+  if(dmgIn(it,k)){it.zones[k].st='found';insMsg(`${it.plate}: avevi ragione, ${ZSU[k]} c'era un danno nuovo. Controlla anche le altre zone prima di chiudere.`,'win')}
   else{S.wk.dmgFalse++;rep(-2);loyal(it.cid,-50,'addebito contestato');log(`${it.cust} contesta l'addebito: ${ZSU[k]} di ${it.plate} non c'è nessun danno nuovo. Reputazione −2`,'rep');
-    insMsg(`${it.plate}: addebito contestato. ${ZSU[k][0].toUpperCase()+ZSU[k].slice(1)} non c'era nessun danno nuovo${it.dmg?`; il danno vero era ${ZSU[it.dmg.zone]} e ora non è più addebitabile`:''}. Reputazione −2.`,'lose');
+    insMsg(`${it.plate}: addebito contestato. ${ZSU[k][0].toUpperCase()+ZSU[k].slice(1)} non c'era nessun danno nuovo${it.dmgs.some(d=>it.zones[d.zone].st!=='found')?`; ${it.dmgs.filter(d=>it.zones[d.zone].st!=='found').map(d=>ZSU[d.zone]).join(' e ')} c'era${it.dmgs.filter(d=>it.zones[d.zone].st!=='found').length>1?'no danni veri, ora non più addebitabili':' un danno vero, ora non più addebitabile'}`:''}. Reputazione −2.`,'lose');
     insClose(id,false,true,true)}
 }
 export function insClose(id,skipped=false,contested=false,quiet=false){
@@ -87,8 +98,8 @@ export function insClose(id,skipped=false,contested=false,quiet=false){
       else{if(c)c.dmgs.push({id:S.nid++,zone:'int',type:'interni',sev:I.sev,cost:I.cost,day:S.day,cust:it.cust,status:'missed'});log(`Interni rovinati su ${it.plate} scoperti dopo la chiusura: non più addebitabili (persi ${eur(I.cost)}).`,'bad');msgs.push(`gli interni erano rovinati e non li hai controllati: persi ${eur(I.cost)}`)}
     }
   }
-  const d=it.dmg,found=d&&it.zones[d.zone].st==='found';
-  if(d){
+  for(const d of it.dmgs){
+    const found=it.zones[d.zone].st==='found';
     const rec={...d,day:S.day,cust:it.cust};
     const where=`${dmgLabel(d).toLowerCase()} ${ZSU[d.zone]} di ${it.plate}`;
     if(found){
@@ -103,7 +114,8 @@ export function insClose(id,skipped=false,contested=false,quiet=false){
       if(!quiet)msgs.push(`c'era un ${dmgLabel(d).toLowerCase()} ${ZSU[d.zone]} che ti è sfuggito${it.kasko?' (coperto dall\'assicurazione)':`: persi ${eur(d.cost)}`}`);
     }
     if(c)c.dmgs.push(rec);
-  }else if(!contested&&it.acted&&!(I&&I.cond!=='ok'))log(`Ispezione di ${it.plate} chiusa: nessun danno nuovo.`);
+  }
+  if(!it.dmgs.length&&!contested&&it.acted&&!(I&&I.cond!=='ok'))log(`Ispezione di ${it.plate} chiusa: nessun danno nuovo.`);
   if(!skipped)washRound();
   if(!skipped&&!contested){
     if(!msgs.length)msgs.push('nessun danno nuovo, interni in ordine');

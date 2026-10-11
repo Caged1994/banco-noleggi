@@ -21,6 +21,7 @@ export function start(data){
   if(!S.rival)S.rival=newRival();
   S.fleet.forEach(c=>{if(c.svcKm==null)initMaint(c,'used')});
   migrateStaff();
+  S.ins.forEach(it=>{if(!it.dmgs){it.dmgs=it.dmg?[it.dmg]:[];delete it.dmg}});
   ui.tab=ui.tab||loadTab();
   if(S.market.some(m=>!m.dealer))genMarket();
   ui.dealer=ui.dealer||'gino';
