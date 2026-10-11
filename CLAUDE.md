@@ -5,7 +5,7 @@ Gestionale 2D di autonoleggio in TypeScript, senza framework né dipendenze a ru
 ## Riferimenti
 - Documento di design (regole e numeri): https://claude.ai/code/artifact/c80051be-6e7e-4624-8649-46adbeac38ea
 - Gioco pubblicato: https://caged1994.github.io/banco-noleggi/
-- Anteprima su claude.ai: si pubblica `build/artifact.html` (non `dist/index.html`, che ha già doctype e head).
+- Il gioco si prova su GitHub Pages, che si aggiorna da solo a ogni push su `main`. Non pubblicare più l'anteprima su claude.ai: al proprietario si dà il link di GitHub Pages.
 
 ## Comandi
 - `node scripts/build.mjs`: compila con `tsc` e unisce i moduli in `dist/index.html` e `build/artifact.html`.
@@ -22,6 +22,6 @@ Gestionale 2D di autonoleggio in TypeScript, senza framework né dipendenze a ru
 - Salvataggio in `localStorage` (`SAVE` in `data/catalog.ts`): quando cambia la forma dello stato, aggiornare il controllo in `app/save.ts` o la chiave.
 
 ## Regole di lavoro
-- Ogni modifica: build, simulazione, poi una prova nel browser (Playwright è disponibile) prima del commit.
+- Ogni modifica: build, simulazione, poi una prova nel browser (Playwright è disponibile) prima del commit; dopo il push, controllare che il workflow di GitHub Actions sia andato a buon fine.
 - Le regole nuove o cambiate vanno riportate anche nel documento di design.
 - Le pagine devono funzionare a 400 px di larghezza e in tema chiaro e scuro (colori solo tramite variabili CSS).
