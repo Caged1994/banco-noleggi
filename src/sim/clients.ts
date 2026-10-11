@@ -1,3 +1,4 @@
+import { DEMAND_PER_CAR, DEMAND_REP, DEMAND_WEEKEND } from '../data/catalog.js';
 import { RIVAL_NAME, divertChance, rivalBusy, winChance } from './rival.js';
 import { RETURN_NOTES, TIERS, pickReturning, returnChance, returningCandidates, tierOf } from './regulars.js';
 import { isWE } from '../core/calendar.js';
@@ -8,7 +9,7 @@ import { CATS, NAMES, SURN, TYPES } from '../data/catalog.js';
 export function genReqs(){
   const weekend=isWE(S.day),M=evMul(S.day);
   const busy=rivalBusy();
-  const n=Math.max(1,Math.round((S.fleet.length*0.6+S.rep/30+(weekend?1:0))*M.dem*(busy?1.2:1)+R(-0.8,1)));
+  const n=Math.max(1,Math.round((S.fleet.length*DEMAND_PER_CAR+S.rep*DEMAND_REP+(weekend?DEMAND_WEEKEND:0))*M.dem*(busy?1.2:1)+R(-0.8,1)));
   for(let i=0;i<n;i++){
     let tw={turista:3,business:weekend?1:4,famiglia:weekend?4:2,locale:3};
     if(S.rep>70)tw.business+=2;

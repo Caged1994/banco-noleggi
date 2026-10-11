@@ -40,6 +40,9 @@ const { tierOf } = await mod('sim/regulars.js');
 const days = Number(process.argv[2] ?? 365);
 // PRICE_MUL=1.2 node scripts/simulate.mjs → il bot usa un listino del 20% sopra la media (per provare la concorrenza)
 const priceMul = Number(process.env.PRICE_MUL ?? 1);
+// PRICING=rival → ogni giorno il bot mette i prezzi a PRICE_MUL × quelli di AutoSprint (giocatore attento)
+const followRival = process.env.PRICING === 'rival';
+const { rivalPrice } = await mod('sim/rival.js');
 const games = Number(process.argv[3] ?? 3);
 
 function check(S) {
@@ -57,7 +60,7 @@ for (let g = 1; g <= games; g++) {
   let S = st.S;
   for (const k of Object.keys(S.prices)) S.prices[k] = Math.round(S.prices[k] * priceMul);
   const perMonth = {};
-  let bought = 0;
+  let bought = 0, occ = 0, occDays = 0, minCash = Infinity, day100 = null;
   for (let i = 0; i < days && !S.lost; i++) {
     const m = dateOf(S.day).m;
     perMonth[m] ??= { req: 0, days: 0 };
@@ -69,6 +72,7 @@ for (let g = 1; g <= games; g++) {
       else if (k.ptype !== 'ritardo' || probOptions(k).length) probSolve(k.id);
       else probSendAway(k.id);
     }
+    if (followRival) for (const k of Object.keys(S.prices)) S.prices[k] = Math.round(rivalPrice(k) * priceMul);
     for (const c of S.fleet) if (c.dirty && freeNow(c)) clean(c.id);
     for (const q of [...S.reqs]) {
       if (!optionsFor(q).length) continue;
@@ -88,13 +92,17 @@ for (let g = 1; g <= games; g++) {
     const offer = S.market.filter((o) => o.dealer === 'gino' || o.dealer === 'flotte').sort((a, b) => a.price - b.price)[0];
     if (offer && S.cash > offer.price + 4000 && S.fleet.length < 14) { buyUsed(offer.id); bought++; }
 
+    occ += S.fleet.filter((c) => c.bookings.some((b) => b.st === 'out' && b.start <= S.day && S.day < b.end)).length / S.fleet.length; occDays++;
     nextDay();
     S = st.S;
+    minCash = Math.min(minCash, S.cash);
+    if (day100 === null && netWorth() >= 100000) day100 = S.day;
     check(S);
   }
   const demand = Object.entries(perMonth).map(([m, v]) => `${MSHORT[m]} ${(v.req / v.days).toFixed(1)}`).join(' · ');
   console.log(`Partita ${g}: giorno ${S.day}${S.lost ? ' (FALLITA)' : ''} · cassa €${Math.round(S.cash)} · patrimonio €${netWorth()} · flotta ${S.fleet.length} (comprate ${bought}) · reputazione ${Math.round(S.rep)} · debito €${debt()}`);
   console.log(`  clienti al giorno: ${demand}`);
+  console.log(`  auto fuori a noleggio in media: ${Math.round(occ / occDays * 100)}% · cassa minima €${Math.round(minCash)} · obiettivo €100.000 ${day100 ? 'raggiunto il giorno ' + day100 : 'non raggiunto'}`);
   const tiers = { fedele: 0, abituale: 0, nuovo: 0, perso: 0 };
   for (const c of S.clients) tiers[tierOf(c)]++;
   const back = S.reports.reduce((a, r) => a + (r.clBack || 0), 0);

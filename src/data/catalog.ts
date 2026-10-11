@@ -91,3 +91,7 @@ export const ROLES={
 };
 export const TRAIT_TXT={Attento:'+7% di probabilità sulle zone pulite, +12% su quelle sporche',Veloce:null,Economico:'stipendio −20%',Persuasivo:'+10% di servizi e soluzioni accettati',Gentile:'+0,3 reputazione a ogni noleggio'};
 export const traitTxt=(role,t)=>t==='Veloce'?(role==='rientri'?'+2 tempo al giorno':'+2 auto lavate a notte'):TRAIT_TXT[t];
+// domanda giornaliera di clienti: (auto × DEMAND_PER_CAR + reputazione × DEMAND_REP + weekend) × stagione ed eventi.
+// Tarata perché i clienti siano di poco sopra quelli che la flotta può servire (d'inverno anche sotto):
+// così il prezzo conta. Con il listino di mercato le auto sono fuori in media 2/3 del tempo.
+export const DEMAND_PER_CAR=0.4, DEMAND_REP=1/50, DEMAND_WEEKEND=0.7;

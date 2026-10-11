@@ -18,8 +18,8 @@ export const RIVAL_BASE = 0.95; // prezzi base: 95% della media di mercato
 export const RIVAL_ADJ_MIN = 0.85, RIVAL_ADJ_MAX = 1.05; // low cost: non sale mai molto
 // prezzi del rivale nel corso dell'anno: alza in estate, scende in inverno
 export const RIVAL_MONTH = [0.95, 0.95, 0.98, 1, 1.03, 1.08, 1.15, 1.18, 1.05, 0.98, 0.96, 1.02];
-// quanto pesa il prezzo per ogni tipo di cliente: clienti persi per ogni +10% rispetto al rivale
-export const PRICE_SENS = { business: 0.1, turista: 0.2, famiglia: 0.2, locale: 0.25 };
+// quanto pesa il prezzo per ogni tipo di cliente: quota di clienti persi per ogni +10% rispetto al rivale
+export const PRICE_SENS = { business: 0.2, turista: 0.4, famiglia: 0.4, locale: 0.5 };
 
 export function newRival() {
   const adj = {};
@@ -44,9 +44,9 @@ export function divertChance(type: string, cat: string, tier: string): number {
   if (tier === 'fedele' || rivalBusy()) return 0;
   const over = priceRatio(cat) - 1;
   if (over <= 0) return 0;
-  const repMul = 1.25 - S.rep / 200; // reputazione 0: ×1,25 · 100: ×0,75
+  const repMul = 1.1 - S.rep / 400; // reputazione 0: ×1,1 · 100: ×0,85
   const tierMul = tier === 'abituale' ? 0.5 : 1;
-  return clamp(over * 10 * PRICE_SENS[type] * repMul * tierMul, 0, 0.85);
+  return clamp(over * 10 * PRICE_SENS[type] * repMul * tierMul, 0, 0.95);
 }
 // Probabilità che un cliente del rivale venga da te perché sei più economico.
 export function winChance(cat: string): number {
