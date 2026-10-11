@@ -60,7 +60,7 @@ function botStaff(S, idle) {
     if (ST.inProbation(e) && e.aptKnown[e.role] && ST.aptOf(e) < 0.85) ST.fire(e.id);
     if (e.contract === 'stagionale' && e.until - S.day <= 7) ST.offerFixed(e.id);
   }
-  if (!S.box.own && S.fleet.length >= 8 && S.cash > 12000) CR.buyBox();
+  if (!S.box.own && S.fleet.length >= 8 && S.cash > 12000 && (!process.env.BOT_ROLES || process.env.BOT_ROLES.includes('meccanico'))) CR.buyBox();
   if (S.box.own && !S.box.diag && S.cash > 9000) CR.buyBoxUp('diag');
   if (S.box.own && !S.box.ponte && S.cash > 8000) CR.buyBoxUp('ponte');
   const want = [];
@@ -68,7 +68,9 @@ function botStaff(S, idle) {
   if (S.fleet.length >= 6) want.push('rientri');
   if (S.fleet.length >= 8) want.push('vendite');
   if (S.box.own) want.push('meccanico');
+  const only = process.env.BOT_ROLES ? process.env.BOT_ROLES.split(',') : null;
   for (const role of want) {
+    if (only && !only.includes(role)) continue;
     if (ST.staffOf(role).length) continue;
     const c = S.cands.find((x) => x.trained && x.role === role) || S.cands.find((x) => !x.trained && hint(x, role))
       || (idle[role] > 14 ? S.cands.find((x) => !x.trained) : null);
@@ -118,28 +120,29 @@ for (let g = 1; g <= games; g++) {
       const want = M.inWinter(S.day + 12) ? 'invernali' : 'estive';
       if (c.tires !== want && !CR.mechDo('tires', c, true) && M.canChangeTires(c)) M.changeTires(c.id, true);
     }
+    // prima le ispezioni (chiuderle fa lavare le auto al lavaggista), poi i clienti con il tempo che resta
+    for (const it of [...S.ins]) {
+      insCheckInt(it.id);
+      for (const k of Object.keys(it.zones)) if (S.time >= 3) insCheck(it.id, k, false);
+      insClose(it.id);
+    }
     for (const c of S.fleet) if (c.dirty && freeNow(c)) clean(c.id);
     for (const q of [...S.reqs]) {
       if (!optionsFor(q).length) continue;
       if (CR.bestSeller(3)) { CR.delegateReq(q.id); continue; }
-      // proporre costa 1 tempo: il bot tiene il tempo che serve per le ispezioni (circa 3 per auto rientrata)
-      if (S.time > S.ins.length * 3) {
+      // proporre costa 1 tempo: il bot ne ha tenuto un po' per le proposte
+      if (S.time >= 1) {
         st.ui.checks[q.id] = q.type === 'famiglia' ? ['seat', 'kasko'] : ['kasko', 'gps'];
         propose(q.id);
       }
       assign(q.id);
-    }
-    for (const it of [...S.ins]) {
-      insCheckInt(it.id);
-      for (const k of Object.keys(it.zones)) if (S.time >= 1) insCheck(it.id, k, false);
-      insClose(it.id);
     }
     for (const c of S.fleet) {
       if (c.dirty && freeNow(c)) clean(c.id);
       if ((c.cond < 60 || visiblyDamaged(c)) && !CR.mechDo('repair', c, true) && S.cash > repairCost(c) + 800) repair(c.id);
     }
     const offer = S.market.filter((o) => o.dealer === 'gino' || o.dealer === 'flotte').sort((a, b) => a.price - b.price)[0];
-    if (offer && S.cash > offer.price + 4000 && S.fleet.length < 14) { buyUsed(offer.id); bought++; }
+    if (offer && S.cash > offer.price + 4000 && S.fleet.length < Number(process.env.FLEET_MAX ?? 14)) { buyUsed(offer.id); bought++; }
 
     occ += S.fleet.filter((c) => c.bookings.some((b) => b.st === 'out' && b.start <= S.day && S.day < b.end)).length / S.fleet.length; occDays++;
     nextDay();

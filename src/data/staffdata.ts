@@ -3,12 +3,12 @@
 // Ruoli. base = riferimento dello stipendio settimanale (livello 0: 65%, livello 5: 115%).
 export const ROLE_KEYS = ['lavaggio', 'rientri', 'vendite', 'meccanico'];
 export const ROLES = {
-  lavaggio: { nome: 'Lavaggista', base: 180, desc: 'Lava le auto appena rientrano, prima dell\'ispezione: zone pulite, danni più facili da trovare. Prodotti €4 per auto.' },
-  rientri: { nome: 'Addetto ai rientri', base: 260, desc: 'Fa il primo controllo delle auto rientrate: più sale di livello, più zone controlla da solo.' },
-  vendite: { nome: 'Venditore al banco', base: 300, desc: 'Gli affidi tu i clienti e i problemi al ritiro: sceglie l\'auto e propone i servizi con il suo tempo.' },
-  meccanico: { nome: 'Meccanico', base: 300, desc: 'Lavora nel box officina: tagliandi, gomme e riparazioni in sede, a costo ridotto e senza fermare l\'auto. Lavora da solo ogni mattina.' },
+  lavaggio: { nome: 'Lavaggista', base: 120, desc: 'Lava le auto dopo il controllo, appena chiudi l\'ispezione, e la mattina quelle da consegnare. Prodotti €4 per auto invece di €15.' },
+  rientri: { nome: 'Addetto ai rientri', base: 210, desc: 'Fa il primo controllo delle auto rientrate: più sale di livello, più zone controlla da solo. Le zone sporche le pulisce sul posto prima di guardarle.' },
+  vendite: { nome: 'Venditore al banco', base: 240, desc: 'Gli affidi tu i clienti e i problemi al ritiro: sceglie l\'auto e propone i servizi con il suo tempo.' },
+  meccanico: { nome: 'Meccanico', base: 260, desc: 'Lavora nel box officina: tagliandi, gomme e riparazioni in sede, a costo ridotto e senza fermare l\'auto. Lavora da solo ogni mattina.' },
 };
-export const APPRENTICE_WAGE = 150; // non addestrato, livello 0
+export const APPRENTICE_WAGE = 100; // non addestrato, livello 0
 export const MAX_STAFF = 8;
 export const LEVEL_MAX = 5;
 // esperienza per passare dal livello L al livello L+1
@@ -26,7 +26,7 @@ export const TRAITS = {
   Studioso: { good: true, txt: 'impara il 60% più in fretta' },
   Poliglotta: { good: true, txt: 'con i turisti vende il 20% in più' },
   Affidabile: { good: true, txt: 'non si ammala mai' },
-  Pignolo: { good: true, txt: 'lavaggi e riparazioni perfetti' },
+  Pignolo: { good: true, txt: 'non sbaglia mai un lavaggio, riparazioni al 100%' },
   Economico: { good: true, txt: 'chiede aumenti più piccoli' },
   Lento: { good: false, txt: '−2 tempo al giorno' },
   Pasticcione: { good: false, txt: 'sbaglia più spesso: controlli meno affidabili, lavori da rifare' },

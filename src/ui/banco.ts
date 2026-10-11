@@ -81,7 +81,7 @@ export function renderIns(){
         ${z.st==='unsure'&&!it.kasko?`<button class="danger" data-a="igamble" data-id="${it.id}" title="Se non c'è un danno nuovo il cliente contesta: −2 reputazione">Addebita lo stesso · se sbagli −2 rep.</button>`:''}`:''}
       </div>`;
     return `<article class="ins">
-      <div class="ins-h"><b>${it.plate}</b><span>${it.model} · riconsegnata da ${it.cust}</span>${it.washedBy||it.checkedBy?`<span class="chip c-acc">${[it.washedBy?'lavata da '+it.washedBy:'',it.checkedBy?'primo controllo di '+it.checkedBy:''].filter(Boolean).join(' · ')}</span>`:''}${it.kasko?'<span class="chip c-ok">Assicurazione totale · danni coperti</span>':'<span class="chip c-warn">Senza assicurazione · franchigia addebitabile</span>'}</div>
+      <div class="ins-h"><b>${it.plate}</b><span>${it.model} · riconsegnata da ${it.cust}</span>${it.checkedBy?`<span class="chip c-acc">primo controllo di ${it.checkedBy}</span>`:''}${it.kasko?'<span class="chip c-ok">Assicurazione totale · danni coperti</span>':'<span class="chip c-warn">Senza assicurazione · franchigia addebitabile</span>'}</div>
       <div class="ins-body">${carSvg(it)}
         <div class="ins-side">${side}
           <div style="border-top:1px solid var(--line);padding-top:8px;display:grid;gap:6px">

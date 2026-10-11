@@ -5,6 +5,7 @@ import { dmgLabel, rollDamage, zoneOld } from './fleet.js';
 import { S, ui } from '../core/state.js';
 import { aptOf, hasTrait, lvOf, useTime } from './staff.js';
 import { log, money, rep } from './ledger.js';
+import { washRound } from './crew.js';
 /* ---------- ispezione ai rientri ---------- */
 // ogni zona: dirty (sporca) e st: none (da controllare) · ok (nessun danno visto) · unsure (sporca, non si capisce) · found (danno trovato)
 export const P_CLEAN=.85, P_DIRTY=.40;
@@ -103,6 +104,7 @@ export function insClose(id,skipped=false,contested=false,quiet=false){
     }
     if(c)c.dmgs.push(rec);
   }else if(!contested&&it.acted&&!(I&&I.cond!=='ok'))log(`Ispezione di ${it.plate} chiusa: nessun danno nuovo.`);
+  if(!skipped)washRound();
   if(!skipped&&!contested){
     if(!msgs.length)msgs.push('nessun danno nuovo, interni in ordine');
     insMsg(`${it.plate}: ispezione chiusa · ${msgs.join(' · ')}.`,bad?'lose':'win');

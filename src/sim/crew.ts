@@ -1,8 +1,8 @@
 // Lavoro dei dipendenti: ognuno ha il suo tempo e lavora da solo, il venditore su tuo incarico.
 //
 // Ogni mattina, prima dei ritiri:
-// 1. il lavaggista lava le auto rientrate (prima quelle da consegnare oggi), esterni 2 tempo e interni 1;
-// 2. l'addetto ai rientri fa il primo controllo: più zone secondo il livello, con la sua probabilità di vedere i danni;
+// 1. l'addetto ai rientri fa il primo controllo: più zone secondo il livello, con la sua probabilità di vedere i danni;
+// 2. il lavaggista lava le auto già controllate (ispezione chiusa), prima quelle da consegnare oggi: 3 tempo, 2 dal livello 2, 1 al livello 5;
 // 3. il meccanico, se c'è il box, fa i lavori in sede: gomme, revisioni, tagliandi, danni, usura, controlli.
 // Il venditore aspetta che tu gli affidi un cliente o un problema al ritiro.
 import { S, ui } from '../core/state.js';
@@ -19,7 +19,7 @@ import { acceptChance, propose, svcBlock, svcPrice } from './services.js';
 import { probSolve } from './pickups.js';
 import { SVC_KEYS } from '../data/catalog.js';
 
-export const WASH_PROD = 4, WASH_EXT_T = 2, WASH_INT_T = 1;
+export const WASH_PROD = 4;
 export const CHECK_ZONES = [2, 3, 4, 5, 6, 6]; // zone esterne controllate per livello; dal 4 anche gli interni
 export const SELL_T = 1; // un cliente al venditore: 1 tempo, più 1 per ogni servizio proposto
 export const MECH_T = { svc: 4, tires: 2, rev: 3, check: 1 };
@@ -30,36 +30,26 @@ export const atBase = (c) => !(c.shopUntil > S.day) && !c.bookings.some((b) => b
 const pickupToday = (c) => c.bookings.some((b) => b.st === 'reserved' && b.start === S.day);
 const byTime = (l) => [...l].sort((a, b) => b.time - a.time);
 
-// --- lavaggista
+// --- lavaggista: lava solo dopo il controllo, cioè le auto in sede senza un'ispezione aperta
+export const washTime = (e) => [3, 3, 2, 2, 2, 1][lvOf(e)];
 function washOne(e, c) {
-  const it = S.ins.find((x) => x.car === c.id);
-  const intToo = it && it.int && it.int.st === 'none' && e.time >= WASH_EXT_T + WASH_INT_T;
-  useTime(e, WASH_EXT_T + (intToo ? WASH_INT_T : 0));
+  useTime(e, washTime(e));
+  if (!hasTrait(e, 'Pignolo') && Math.random() < (hasTrait(e, 'Pasticcione') ? 0.12 : 0) + Math.max(0, 0.06 - 0.02 * lvOf(e)) - (aptOf(e) - 1) * 0.1) return false; // lavaggio da rifare
   money(-WASH_PROD, 'wash');
   c.dirty = false;
-  const first = e.name.split(' ')[0];
-  if (it) {
-    // ogni zona torna pulita; un lavaggio frettoloso può lasciarne qualcuna sporca
-    const p = hasTrait(e, 'Pignolo') ? 1 : clamp(0.8 + 0.04 * lvOf(e) + (aptOf(e) - 1) * 0.4 - (hasTrait(e, 'Pasticcione') ? 0.15 : 0), 0.5, 1);
-    let left = 0;
-    for (const k of ZONE_KEYS) if (it.zones[k].dirty) { if (Math.random() < p) it.zones[k].dirty = false; else left++; }
-    it.washedBy = first + (left ? ` (${left} zon${left > 1 ? 'e' : 'a'} ancora sporc${left > 1 ? 'he' : 'a'})` : '');
-    if (intToo) { it.int.st = 'checked'; it.int.by = first; it.acted = true; }
-  }
   return true;
 }
-function washRound() {
+export function washRound() {
   const washers = workingOf('lavaggio');
   if (!washers.length) return;
-  const prio = (c) => (pickupToday(c) ? 0 : S.ins.some((x) => x.car === c.id) ? 1 : 2);
-  const dirty = S.fleet.filter((c) => c.dirty && atBase(c)).sort((a, b) => prio(a) - prio(b));
-  let n = 0;
+  const dirty = S.fleet.filter((c) => c.dirty && atBase(c) && !S.ins.some((x) => x.car === c.id)).sort((a, b) => +pickupToday(b) - +pickupToday(a));
+  let n = 0, redo = 0;
   for (const c of dirty) {
-    const e = byTime(washers)[0];
-    if (!e || e.time < WASH_EXT_T) break;
-    if (washOne(e, c)) n++;
+    const e = byTime(washers).find((x) => x.time >= washTime(x));
+    if (!e) break;
+    if (washOne(e, c)) n++; else redo++;
   }
-  if (n) log(`${washers.map((e) => e.name.split(' ')[0]).join(' e ')} ha${washers.length > 1 ? 'nno' : ''} lavato ${n} aut${n > 1 ? 'o' : 'o'} stamattina (prodotti −${eur(n * WASH_PROD)}).`);
+  if (n || redo) log(`${washers.map((e) => e.name.split(' ')[0]).join(' e ')} ha${washers.length > 1 ? 'nno' : ''} lavato ${n} aut${n > 1 ? 'o' : 'o'}${n ? ` (prodotti −${eur(n * WASH_PROD)})` : ''}${redo ? `; ${redo} lavaggi${redo > 1 ? '' : 'o'} da rifare` : ''}.`);
 }
 
 // --- addetto ai rientri: primo controllo
@@ -71,7 +61,8 @@ function checkRound() {
     if (!e || e.time < 1) break;
     const n = CHECK_ZONES[lvOf(e)];
     const todo = ZONE_KEYS.filter((k) => it.zones[k].st === 'none').sort((a, b) => +it.zones[a].dirty - +it.zones[b].dirty).slice(0, n);
-    for (const k of todo) { if (e.time < 1) break; insCheck(it.id, k, false, e); }
+    // le zone sporche le pulisce sul posto e poi le controlla (2 tempo), come può fare il giocatore
+    for (const k of todo) { const w = it.zones[k].dirty; if (e.time < (w ? 2 : 1)) break; insCheck(it.id, k, w, e); }
     if (lvOf(e) >= 4 && it.int && it.int.st === 'none' && e.time >= 1) insCheckInt(it.id, e);
     it.checkedBy = e.name.split(' ')[0];
   }
@@ -152,8 +143,8 @@ export const breakdownMul = (c, d = S.day) => (c.chk && d - c.chk <= CHECK_DAYS 
 
 // Giro della mattina, e lavoro immediato di chi viene assunto durante la giornata.
 export function crewMorning() {
-  washRound();
   checkRound();
+  washRound();
   mechRound();
 }
 export function crewWork(e) {
