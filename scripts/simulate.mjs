@@ -43,6 +43,9 @@ const priceMul = Number(process.env.PRICE_MUL ?? 1);
 // PRICING=rival → ogni giorno il bot mette i prezzi a PRICE_MUL × quelli di AutoSprint (giocatore attento)
 const followRival = process.env.PRICING === 'rival';
 const { rivalPrice } = await mod('sim/rival.js');
+// MAINT=off → il bot non fa tagliandi, revisioni né cambi gomme (per misurare quanto costa trascurarli)
+const maintOn = process.env.MAINT !== 'off';
+const M = await mod('sim/maintenance.js');
 const games = Number(process.argv[3] ?? 3);
 
 function check(S) {
@@ -73,6 +76,12 @@ for (let g = 1; g <= games; g++) {
       else probSendAway(k.id);
     }
     if (followRival) for (const k of Object.keys(S.prices)) S.prices[k] = Math.round(rivalPrice(k) * priceMul);
+    if (maintOn) for (const c of S.fleet) {
+      if (M.kmToService(c) <= 800 && M.canWork(c)) M.doService(c.id);
+      if (M.revDaysLeft(c) <= 20 && M.canWork(c)) M.doRevision(c.id);
+      const want = M.inWinter(S.day + 12) ? 'invernali' : 'estive';
+      if (c.tires !== want && M.canChangeTires(c)) M.changeTires(c.id, true);
+    }
     for (const c of S.fleet) if (c.dirty && freeNow(c)) clean(c.id);
     for (const q of [...S.reqs]) {
       if (!optionsFor(q).length) continue;
@@ -102,6 +111,8 @@ for (let g = 1; g <= games; g++) {
   const demand = Object.entries(perMonth).map(([m, v]) => `${MSHORT[m]} ${(v.req / v.days).toFixed(1)}`).join(' · ');
   console.log(`Partita ${g}: giorno ${S.day}${S.lost ? ' (FALLITA)' : ''} · cassa €${Math.round(S.cash)} · patrimonio €${netWorth()} · flotta ${S.fleet.length} (comprate ${bought}) · reputazione ${Math.round(S.rep)} · debito €${debt()}`);
   console.log(`  clienti al giorno: ${demand}`);
+  const maintCost = S.reports.reduce((a, r) => a + (r.out.maint || 0), 0);
+  console.log(`  manutenzione: €${Math.round(maintCost)} nell'anno`);
   console.log(`  auto fuori a noleggio in media: ${Math.round(occ / occDays * 100)}% · cassa minima €${Math.round(minCash)} · obiettivo €100.000 ${day100 ? 'raggiunto il giorno ' + day100 : 'non raggiunto'}`);
   const tiers = { fedele: 0, abituale: 0, nuovo: 0, perso: 0 };
   for (const c of S.clients) tiers[tierOf(c)]++;

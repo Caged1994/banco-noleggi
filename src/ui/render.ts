@@ -1,3 +1,4 @@
+import { REVISION_COST, TIRE_COST, canChangeTires, canWork, inWinter, kmToService, maintIssues, revDaysLeft, serviceCost, tireTarget, tiresToChange } from '../sim/maintenance.js';
 import { RIVAL_NAME, RIVAL_SLOGAN, rivalPrice } from '../sim/rival.js';
 import { renderClients, tierChip } from './clients.js';
 import { S, ui } from '../core/state.js';
@@ -19,6 +20,19 @@ import { carPriceMul } from '../sim/seasons.js';
 import { DEALER, DEALERS } from '../sim/market.js';
 import { daysToSunday, weeklyCosts } from '../sim/ledger.js';
 import { save } from '../app/save.js';
+// Riga di manutenzione nella scheda dell'auto: stato e pulsanti dei lavori.
+function maintRow(c){
+  const iss=maintIssues(c),k=kmToService(c),r=revDaysLeft(c);
+  const cls=l=>l==='bad'?'c-bad':'c-warn';
+  const info=`<span class="mi">Tagliando ${k>=0?`tra ${k.toLocaleString('it-IT')} km`:`<b>scaduto</b>`} · Gomme ${c.tires} · Revisione ${r>=0?`entro il ${dshort(c.revDue)}`:'<b>scaduta</b>'}</span>`;
+  const work=canWork(c);
+  const btns=[
+    k<=3000?`<button data-a="service" data-id="${c.id}" ${!work||S.cash<serviceCost(c)?'disabled':''} title="Ferma l'auto un giorno">Tagliando ${eur(serviceCost(c))}</button>`:'',
+    r<=60?`<button data-a="revision" data-id="${c.id}" ${!work||S.cash<REVISION_COST?'disabled':''} title="Ferma l'auto un giorno">Revisione ${eur(REVISION_COST)}</button>`:'',
+    canChangeTires(c)?`<button data-a="tires" data-id="${c.id}" ${S.cash<TIRE_COST[c.cat]?'disabled':''} title="In giornata">Monta ${tireTarget(c)} ${eur(TIRE_COST[c.cat])}</button>`:'',
+  ].join('');
+  return `<div class="maint">${iss.map(i=>`<span class="chip ${cls(i.lvl)}">${i.txt}</span>`).join(' ')}${info}${btns?`<div class="acts">${btns}</div>`:''}</div>`;
+}
 export function render(){
   document.getElementById('stats').innerHTML=`
     <div class="stat"><span class="lbl">Cassa</span><b class="${S.cash<0?'neg':''}">${eur(S.cash)}</b></div>
@@ -60,11 +74,12 @@ export function render(){
 
   // flotta
   const free=S.fleet.filter(freeNow).length;
-  document.getElementById('fleetcount').textContent=`${free} libere su ${S.fleet.length}`;
+  const tch=tiresToChange();
+  document.getElementById('fleetcount').innerHTML=`${free} libere su ${S.fleet.length}${tch.length?` <button data-a="tiresall">Gomme ${inWinter(S.day)?'invernali':'estive'} a ${tch.length} aut${tch.length>1?'o':'o'} · ${eur(tch.reduce((a,c)=>a+TIRE_COST[c.cat],0))}</button>`:''}`;
   document.getElementById('fleet').innerHTML=S.fleet.length?S.fleet.map(c=>{
     const b=curBooking(c),nb=nextBooking(c);let st;
     if(b)st=`<span class="chip c-acc">Noleggiata · rientra ${wdd(b.end)}</span>`;
-    else if(c.shopUntil>S.day)st=`<span class="chip c-mut">Officina · pronta ${wdd(c.shopUntil)}</span>`;
+    else if(c.shopUntil>S.day)st=`<span class="chip c-mut">${c.shopWhat||'Officina'} · pronta ${wdd(c.shopUntil)}</span>`;
     else st=c.dirty?`<span class="chip c-warn">Libera · sporca</span>`:`<span class="chip c-ok">Libera</span>`;
     if(nb&&nb!==b)st+=` <span class="chip c-mut">Prenotata dal ${wdd(nb.start)}</span>`;
     const isFree=freeNow(c),rc=repairCost(c),sv=sellPrice(c),armed=ui.armed==='sell-'+c.id,od=openDmgs(c),grave=od.some(d=>d.sev==='grave');
@@ -81,7 +96,7 @@ export function render(){
         ${c.dirty?`<button data-a="clean" data-id="${c.id}" ${S.cash<CLEAN?'disabled':''}>Lava ${eur(CLEAN)}</button>`:''}
         ${c.cond<100||od.length?`<button data-a="repair" data-id="${c.id}" ${(S.cash<rc||!canRepair(c))?'disabled':''} title="${canRepair(c)?`Usura ${eur(wearCost(c))} + danni ${eur(dmgRepairCost(c))} · pronta in ${repairDays(c)} g`:'Prenotata: non c\'è tempo per l\'officina'}">Officina ${eur(rc)}</button>`:''}
         ${canSell(c)?`<button class="danger ${armed?'armed':''}" data-a="sell" data-id="${c.id}">${armed?'Conferma '+eur(sv):'Vendi'}</button>`:''}`:''}
-      </div>${hist}</article>`}).join(''):`<div class="empty">Non hai auto. Comprane una dal mercato qui sotto.</div>`;
+      </div>${maintRow(c)}${hist}</article>`}).join(''):`<div class="empty">Non hai auto. Comprane una dal mercato qui sotto.</div>`;
 
   renderPlan();
   renderIns();

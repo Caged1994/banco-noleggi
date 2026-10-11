@@ -1,3 +1,4 @@
+import { initMaint } from '../sim/maintenance.js';
 import { newRival } from '../sim/rival.js';
 import { SAVE, SVC } from '../data/catalog.js';
 import { S, ui, setState } from '../core/state.js';
@@ -17,6 +18,7 @@ export function start(data){
   if(!S.events)S.events=[];
   if(!S.clients)S.clients=[];
   if(!S.rival)S.rival=newRival();
+  S.fleet.forEach(c=>{if(c.svcKm==null)initMaint(c,'used')});
   ui.tab=ui.tab||loadTab();
   if(S.market.some(m=>!m.dealer))genMarket();
   ui.dealer=ui.dealer||'gino';

@@ -1,3 +1,4 @@
+import { WINTER_TIRE_WEAR, inWinter, maintReminders, serviceRisk } from './maintenance.js';
 import { rivalDaily, rivalWeekly } from './rival.js';
 import { loyal } from './regulars.js';
 import { S, ui } from '../core/state.js';
@@ -33,10 +34,10 @@ export function nextDay(){
   for(const c of S.fleet){
     const b=c.bookings.find(x=>x.st==='out'&&x.start<=d&&d<x.end);
     if(b){
-      if(Math.random()<(c.cond<45?(45-c.cond)/160:0)+(c.fragile?.035:0)){
+      if(Math.random()<(c.cond<45?(45-c.cond)/160:0)+(c.fragile?.035:0)+serviceRisk(c)){
         const refund=Math.max(0,b.end-nd)*(b.rate+b.svcRate);
         c.bookings=c.bookings.filter(x=>x!==b);
-        money(-150,'repair');money(-refund,'refund');rep(-6);loyal(b.cid,-30,'guasto durante il noleggio');c.cond=Math.max(5,c.cond-10);c.shopUntil=nd+2;c.dirty=false;
+        money(-150,'repair');money(-refund,'refund');rep(-6);loyal(b.cid,-30,'guasto durante il noleggio');c.cond=Math.max(5,c.cond-10);c.shopUntil=nd+2;c.shopStart=nd;c.shopWhat='Guasto';c.dirty=false;
         log(`Guasto! ${c.model} ${c.plate} in panne con ${b.cust}. Carro attrezzi e rimborso: −${eur(150+refund)}`,'bad');
         c.bookings.filter(x=>x.start<c.shopUntil&&x.end>nd).forEach(x=>cancelBooking(c,x,'auto in officina'));
         continue;
@@ -46,7 +47,7 @@ export function nextDay(){
         if(!b.late&&!blocked&&Math.random()<.06){b.late=true;b.end=nd+1;money(b.rate+20,'extra');log(`${b.cust} riconsegna ${c.plate} in ritardo: addebito +${eur(b.rate+20)}`,'in')}
         else{
           c.bookings=c.bookings.filter(x=>x!==b);
-          c.cond=Math.max(0,Math.round(c.cond-R(1,2.5)*b.days-R(0,2)));c.km+=Math.round(R(90,260)*b.days);c.dirty=true;
+          c.cond=Math.max(0,Math.round(c.cond-(R(1,2.5)*b.days+R(0,2))*(c.tires==='invernali'&&!inWinter(d)?WINTER_TIRE_WEAR:1)));c.km+=Math.round(R(90,260)*b.days);c.dirty=true;
           newInspection(c,b);
           const ev=Math.random();
           if(ev<.10){money(40,'extra');log(`${b.cust} riconsegna ${c.plate} senza aver fatto il pieno: +${eur(40)}`,'in')}
@@ -56,7 +57,7 @@ export function nextDay(){
         }
       }
     }
-    if(c.shopUntil===nd){c.cond=Math.max(c.cond,96);log(`${c.model} ${c.plate} è pronta dall'officina.`)}
+    if(c.shopUntil===nd){if(/Officina|Guasto/.test(c.shopWhat||'Officina'))c.cond=Math.max(c.cond,96);log(`${c.model} ${c.plate} è pronta dall'officina (${(c.shopWhat||'officina').toLowerCase()}).`)}
   }
   nightWash(nd);
 
@@ -75,6 +76,7 @@ export function nextDay(){
   if(isSun(d))S.wk=newWeek();
   if((nd-1)%7===0){genCands();log('Nuovi candidati per il personale disponibili questa settimana.')}
   planEvents();
+  maintReminders();
   if((nd-1)%7===0)rivalWeekly();
   rivalDaily();
   for(const e of S.events)if(e.start===nd)log(`Oggi inizia: ${e.nome}.`,'hdr');

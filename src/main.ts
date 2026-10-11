@@ -1,3 +1,4 @@
+import { changeAllTires, changeTires, doRevision, doService } from './sim/maintenance.js';
 // Punto d'ingresso: collega gli eventi della pagina e avvia la partita.
 import { S, ui } from './core/state.js';
 import { renderIns } from './ui/banco.js';
@@ -51,6 +52,10 @@ document.addEventListener('click',e=>{
   else if(a==='psolve')probSolve(id);
   else if(a==='psend')probSendAway(id);
   else if(a==='hire')hire(id);
+  else if(a==='service')doService(id);
+  else if(a==='revision')doRevision(id);
+  else if(a==='tires')changeTires(id);
+  else if(a==='tiresall')changeAllTires();
   else if(a==='borrow')borrow(+b.dataset.k);
   else if(a==='hist'){ui.hist[id]=!ui.hist[id]}
   else if(a==='ropen')ui.report=S.reports.length-1;

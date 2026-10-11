@@ -1,3 +1,4 @@
+import { maintIssues } from '../sim/maintenance.js';
 import { rivalStatus } from '../sim/rival.js';
 import { S, ui } from '../core/state.js';
 import { freeNow, visiblyDamaged } from '../sim/fleet.js';
@@ -9,7 +10,7 @@ export function loadTab(){try{const t=localStorage.getItem('banco-noleggi-tab');
 export function saveTab(t){try{localStorage.setItem('banco-noleggi-tab',t)}catch(e){}}
 export function renderTabs(){
   const todo=S.reqs.length+S.ins.length+S.desk.length;
-  const fleetWarn=S.fleet.filter(c=>freeNow(c)&&(c.dirty||visiblyDamaged(c)||c.cond<50)).length;
+  const fleetWarn=S.fleet.filter(c=>(freeNow(c)&&(c.dirty||visiblyDamaged(c)||c.cond<50))||maintIssues(c).some(i=>i.lvl==='bad')).length;
   const upcoming=S.events.filter(e=>e.end>S.day).length;
   const badge={banco:todo?[todo,'']:null,flotta:fleetWarn?[fleetWarn,'warn']:null,registro:upcoming?[upcoming,'warn']:null};
   document.getElementById('tabs').innerHTML=TABS.map(([k,l])=>`<button class="tab" role="tab" id="tab-${k}" data-tab="${k}" aria-selected="${ui.tab===k}">${l}${badge[k]?`<span class="badge ${badge[k][1]}">${badge[k][0]}</span>`:''}</button>`).join('');

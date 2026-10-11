@@ -1,3 +1,4 @@
+import { maintOk } from './maintenance.js';
 import { loyal } from './regulars.js';
 import { S } from '../core/state.js';
 import { R, RI, eur, pick, plate, wpick } from '../core/util.js';
@@ -13,7 +14,7 @@ export function freeRange(c,from,to){for(let d=from;d<to;d++)if(busyOn(c,d))retu
 export function curBooking(c,d=S.day){const l=c.bookings.filter(b=>b.start<=d&&d<b.end);return l.find(b=>b.st!=='reserved')||l[0]}
 // overbooking: l'auto è occupata solo da prenotazioni future (non ancora ritirate) e mai da più di una
 export function canOverbook(c,q){
-  if(q.start<=S.day||!eligible(q,c))return false;
+  if(q.start<=S.day||!eligible(q,c)||!maintOk(c,q.start,q.start+q.days))return false;
   let any=false;
   for(let d=q.start;d<q.start+q.days;d++){
     if(c.shopUntil>d)return false;
@@ -53,7 +54,7 @@ export const visiblyDamaged=c=>openDmgs(c).length>=3||openDmgs(c).some(d=>d.sev=
 export function clean(id){const c=S.fleet.find(x=>x.id===id);if(!c||!c.dirty||!freeNow(c)||S.cash<CLEAN)return;c.dirty=false;money(-CLEAN,'wash');log(`Lavaggio ${c.plate}: −${eur(CLEAN)}`,'out')}
 export function canRepair(c){return freeNow(c)&&(c.cond<100||openDmgs(c).length>0)&&freeRange(c,S.day,S.day+repairDays(c))}
 export function repair(id){const c=S.fleet.find(x=>x.id===id);if(!c||!canRepair(c))return;const cost=repairCost(c);if(S.cash<cost)return;
-  const nd=openDmgs(c).length;money(-cost,'repair');c.shopUntil=S.day+repairDays(c);c.dirty=false;openDmgs(c).forEach(d=>d.repaired=c.shopUntil);
+  const nd=openDmgs(c).length;money(-cost,'repair');c.shopUntil=S.day+repairDays(c);c.shopStart=S.day;c.shopWhat='Officina';c.dirty=false;openDmgs(c).forEach(d=>d.repaired=c.shopUntil);
   log(`${c.model} ${c.plate} in officina${nd?` (${nd} dann${nd>1?'i':'o'} da riparare)`:''}, pronta ${wdd(c.shopUntil)}: −${eur(cost)}`,'out')}
 export const canSell=c=>freeNow(c)&&!c.bookings.some(b=>b.end>S.day);
 export const sellPrice=c=>Math.round(value(c)*.9*carPriceMul(S.day));

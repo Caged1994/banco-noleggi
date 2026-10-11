@@ -228,6 +228,12 @@ select,input{font:500 13px var(--f-body);color:var(--ink);background:var(--sunk)
 .evrow:first-child{border-top:0}
 .evrow .when{font:600 11.5px var(--f-mono);color:var(--muted);white-space:nowrap}
 .evrow small{color:var(--muted);display:block}
+/* manutenzione */
+.maint{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;border-top:1px solid var(--line);padding-top:6px;font-size:12.5px}
+.maint .mi{color:var(--muted)}
+.maint .mi b{color:var(--bad)}
+.maint .acts{margin-left:auto}
+#fleetcount button{font-size:12px;padding:6px 9px;margin-left:8px;text-transform:none;letter-spacing:0}
 /* concorrenza */
 .rival{display:grid;gap:2px;padding:10px 12px;background:var(--sunk);border-radius:8px;margin-bottom:6px}
 .rival b{font:700 17px/1.1 var(--f-display)}

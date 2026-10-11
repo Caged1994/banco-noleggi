@@ -1,3 +1,4 @@
+import { maintOk } from './maintenance.js';
 import { clientById, loyal, tierOf } from './regulars.js';
 import { S, ui } from '../core/state.js';
 import { busyOn, eligible, freeRange, visiblyDamaged } from './fleet.js';
@@ -11,7 +12,7 @@ export function carFor(b){return S.fleet.find(c=>c.bookings.includes(b))}
 // auto libere che possono sostituire quella prenotata (stessa categoria o superiore)
 export function swapOptions(b,minTier?){
   const q={cat:b.cat};
-  return S.fleet.filter(c=>freeRange(c,S.day,b.end)&&(minTier!=null?(c.cat!=='furgone'&&CATS[c.cat].tier>minTier):eligible(q,c)))
+  return S.fleet.filter(c=>freeRange(c,S.day,b.end)&&maintOk(c,S.day,b.end)&&(minTier!=null?(c.cat!=='furgone'&&CATS[c.cat].tier>minTier):eligible(q,c)))
     .sort((x,y)=>CATS[x.cat].tier-CATS[y.cat].tier||y.cond-x.cond);
 }
 export function handOver(c,b){

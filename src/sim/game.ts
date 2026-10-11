@@ -1,3 +1,4 @@
+import { initMaint } from './maintenance.js';
 import { newRival } from './rival.js';
 import { S, ui, setState, setUi } from '../core/state.js';
 import { log, newWeek } from './ledger.js';
@@ -17,6 +18,7 @@ export function newGame(){
   CAT_KEYS.forEach(k=>S.prices[k]=CATS[k].base);
   FIXED_SVC.forEach(s=>S.sprices[s]=SVC[s].std);
   S.fleet.push(newCar('utilitaria',92,24000),newCar('utilitaria',78,61000),newCar('berlina',85,38000),newCar('suv',74,82000));
+  S.fleet.forEach(c=>initMaint(c,'used'));
   preDamage(S.fleet[1],1);preDamage(S.fleet[3],2);
   setUi({tab:ui.tab||'banco',armed:null,preview:null,sel:{},checks:{},zone:{},report:null,dsel:{},hist:{},dcat:'berlina'});
   genMarket();genCands();genReqs();

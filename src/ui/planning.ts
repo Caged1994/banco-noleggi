@@ -20,7 +20,7 @@ export function renderPlan(){
     for(const c of cars){
       let bars='';
       c.bookings.forEach(b=>{const cls=b.ob?'book ob':b.st==='out'?'rent':b.st==='waiting'?'book wait':'book';bars+=bar(cls,b.start,b.end,surname(b.cust)+svcTag(b.svc),`${b.cust} · ${wdd(b.start)} → rientro ${wdd(b.end)}${b.svc.length?' · '+svcNames(b.svc):''}${b.ob?' · overbooking':''}${b.st==='waiting'?' · problema al banco':''}`)});
-      if(c.shopUntil>S.day)bars+=bar('shop',S.day,c.shopUntil,'Officina',`In officina fino a ${wdd(c.shopUntil)}`);
+      if(c.shopUntil>S.day)bars+=bar('shop',S.day,c.shopUntil,c.shopWhat||'Officina',`${c.shopWhat||'Officina'} fino a ${wdd(c.shopUntil)}`);
       const p=ui.preview;
       if(p&&p.car===c.id)bars+=bar('prev',p.start,p.end,surname(p.name),`Proposta per ${p.name}`);
       html+=`<div class="prow"><div class="pl"><b>${c.plate}</b><small>${c.model} · ${c.cond}%${c.dirty?' · <span class="dirty">sporca</span>':''}</small></div>${cells}${bars}</div>`;

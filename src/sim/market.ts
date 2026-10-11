@@ -1,3 +1,4 @@
+import { initMaint } from './maintenance.js';
 import { dateOf } from '../core/calendar.js';
 import { S, ui } from '../core/state.js';
 import { RI, eur, pick, wpick } from '../core/util.js';
@@ -50,6 +51,7 @@ export function buyUsed(id){
   const m=S.market.find(x=>x.id===id);if(!m||S.cash<m.price)return;
   const D:any=DEALER(m.dealer)||{nome:'rivenditore'};
   money(-m.price,'buy');const c=newCar(m.cat,m.cond,m.km);c.model=m.model;preDamage(c,m.dmgN||0);if(D.fragile)c.fragile=true;
+  initMaint(c,D.fragile?'bad':D.newPrice?'new':'used');if(D.newPrice)c.revDue-=365;
   S.fleet.push(c);S.market=S.market.filter(x=>x!==m);
   let note='';
   if(m.hid){preDamage(c,m.hid);note=` Sorpresa: ${m.hid} dann${m.hid>1?'i':'o'} non dichiarat${m.hid>1?'i':'o'} (${openDmgs(c).slice(-m.hid).map(dmgLabel).join(', ').toLowerCase()}).`}
@@ -57,5 +59,5 @@ export function buyUsed(id){
   log(`Acquistata da ${D.nome} ${c.model} (${c.plate}): −${eur(m.price)}.${note}`,note?'bad':'out');
   ui.mktMsg={txt:`${c.model} ${c.plate} acquistata da ${D.nome} per ${eur(m.price)}.${note||' Nessuna sorpresa.'}`,kind:note?'lose':'win'};
 }
-export function buyNew(cat){const p=CATS[cat].buy;if(S.cash<p)return;money(-p,'buy');const c=newCar(cat);S.fleet.push(c);log(`Acquistata da Concessionaria Stellauto ${c.model} nuova (${c.plate}): −${eur(p)}`,'out');ui.mktMsg={txt:`${c.model} ${c.plate} nuova, consegnata con il fiocco. −${eur(p)}.`,kind:'win'}}
+export function buyNew(cat){const p=CATS[cat].buy;if(S.cash<p)return;money(-p,'buy');const c=initMaint(newCar(cat),'new');S.fleet.push(c);log(`Acquistata da Concessionaria Stellauto ${c.model} nuova (${c.plate}): −${eur(p)}`,'out');ui.mktMsg={txt:`${c.model} ${c.plate} nuova, consegnata con il fiocco. −${eur(p)}.`,kind:'win'}}
 export function buyStock(kind){const K=STOCK[kind];if(!K||S.cash<K.cost)return;money(-K.cost,'buy');S[K.key]++;log(`Acquistato un ${K.nome} (ora ${S[K.key]}): −${eur(K.cost)}`,'out')}

@@ -1,3 +1,4 @@
+import { maintOk } from './maintenance.js';
 import { loyal, recordVisit, registerClient } from './regulars.js';
 import { S, ui } from '../core/state.js';
 import { canOverbook, eligible, freeRange, isUpgrade, visiblyDamaged } from './fleet.js';
@@ -57,6 +58,6 @@ export function decline(id){const q=S.reqs.find(r=>r.id===id);if(!q)return;
   else log(`Hai rifiutato ${q.name}.`);
   S.reqs=S.reqs.filter(x=>x!==q);ui.preview=null}
 export function optionsFor(q){
-  return S.fleet.filter(c=>eligible(q,c)&&freeRange(c,q.start,q.start+q.days))
+  return S.fleet.filter(c=>eligible(q,c)&&freeRange(c,q.start,q.start+q.days)&&maintOk(c,q.start,q.start+q.days))
     .sort((a,b)=>(a.cat===q.cat?0:1)-(b.cat===q.cat?0:1)||b.cond-a.cond);
 }
