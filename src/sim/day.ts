@@ -3,7 +3,7 @@ import { rivalDaily, rivalWeekly } from './rival.js';
 import { loyal } from './regulars.js';
 import { S, ui } from '../core/state.js';
 import { insClose, newInspection } from './inspection.js';
-import { nightWash, overSendAway, probSendAway, processPickups } from './pickups.js';
+import { overSendAway, probSendAway, processPickups } from './pickups.js';
 import { log, money, newWeek, rep, wages } from './ledger.js';
 import { isSun, wdd } from '../core/calendar.js';
 import { R, eur } from '../core/util.js';
@@ -12,7 +12,8 @@ import { payLoans } from './bank.js';
 import { cancelBooking } from './fleet.js';
 import { missedOpportunity, optionsFor } from './desk.js';
 import { buildReport } from './report.js';
-import { dailyTime, genCands } from './staff.js';
+import { PLAYER_TIME, staffDaily, weeklyCands } from './staff.js';
+import { breakdownMul, crewMorning } from './crew.js';
 import { planEvents } from './seasons.js';
 import { genMarket } from './market.js';
 import { genReqs } from './clients.js';
@@ -34,7 +35,7 @@ export function nextDay(){
   for(const c of S.fleet){
     const b=c.bookings.find(x=>x.st==='out'&&x.start<=d&&d<x.end);
     if(b){
-      if(Math.random()<(c.cond<45?(45-c.cond)/160:0)+(c.fragile?.035:0)+serviceRisk(c)){
+      if(Math.random()<((c.cond<45?(45-c.cond)/160:0)+(c.fragile?.035:0)+serviceRisk(c))*breakdownMul(c,d)){
         const refund=Math.max(0,b.end-nd)*(b.rate+b.svcRate);
         c.bookings=c.bookings.filter(x=>x!==b);
         money(-150,'repair');money(-refund,'refund');rep(-6);loyal(b.cid,-30,'guasto durante il noleggio');c.cond=Math.max(5,c.cond-10);c.shopUntil=nd+2;c.shopStart=nd;c.shopWhat='Guasto';c.dirty=false;
@@ -59,7 +60,6 @@ export function nextDay(){
     }
     if(c.shopUntil===nd){if(/Officina|Guasto/.test(c.shopWhat||'Officina'))c.cond=Math.max(c.cond,96);log(`${c.model} ${c.plate} è pronta dall'officina (${(c.shopWhat||'officina').toLowerCase()}).`)}
   }
-  nightWash(nd);
 
   if(S.reqs.length){
     S.stats.lost+=S.reqs.length;
@@ -72,14 +72,16 @@ export function nextDay(){
     if(ignored.length){rep(-pen);log(`${ignored.length} prenotazion${ignored.length>1?'i':'e'} ignorat${ignored.length>1?'e':'a'} pur avendo auto libere. Reputazione −${pen.toFixed(1)}`,'rep')}
   }
   if(isSun(d))buildReport(d);
-  S.reqs=[];S.day=nd;S.time=dailyTime();ui.insMsg=null;ui.preview=null;ui.sel={};ui.checks={};ui.dsel={};
+  S.reqs=[];S.day=nd;S.time=PLAYER_TIME;ui.insMsg=null;ui.preview=null;ui.sel={};ui.checks={};ui.dsel={};
   if(isSun(d))S.wk=newWeek();
-  if((nd-1)%7===0){genCands();log('Nuovi candidati per il personale disponibili questa settimana.')}
+  if((nd-1)%7===0)weeklyCands();
+  staffDaily(nd);
   planEvents();
   maintReminders();
   if((nd-1)%7===0)rivalWeekly();
   rivalDaily();
   for(const e of S.events)if(e.start===nd)log(`Oggi inizia: ${e.nome}.`,'hdr');
+  crewMorning();
   processPickups(nd);
   S.hist.push(Math.round(S.cash));if(S.hist.length>60)S.hist.shift();
   if(nd%3===1)genMarket();

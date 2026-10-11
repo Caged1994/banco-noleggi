@@ -13,7 +13,10 @@ import { includedSvc, svcBlock, svcPrice } from '../sim/services.js';
 import { miniStrip, renderDesk, renderIns, svcChips } from './banco.js';
 import { STOCK, canRepair, canSell, curBooking, dmgLabel, dmgRepairCost, freeNow, nextBooking, openDmgs, repairCost, repairDays, sellPrice, wearCost } from '../sim/fleet.js';
 import { renderPlan } from './planning.js';
-import { renderBank, renderStaff } from './manage.js';
+import { renderBank } from './manage.js';
+import { renderCrew, renderTeam } from './team.js';
+import { boxValue, bestSeller, inHouse, mechRepairCost, mechSvcCost, mechTireCost } from '../sim/crew.js';
+import { PROPOSE_T } from '../sim/services.js';
 import { renderEvList, renderSeason, renderTabs } from './tabs.js';
 import { renderReport } from './report.js';
 import { carPriceMul } from '../sim/seasons.js';
@@ -26,10 +29,15 @@ function maintRow(c){
   const cls=l=>l==='bad'?'c-bad':'c-warn';
   const info=`<span class="mi">Tagliando ${k>=0?`tra ${k.toLocaleString('it-IT')} km`:`<b>scaduto</b>`} · Gomme ${c.tires} · Revisione ${r>=0?`entro il ${dshort(c.revDue)}`:'<b>scaduta</b>'}</span>`;
   const work=canWork(c);
+  // con il meccanico e il box il lavoro si fa in sede: costa meno e l'auto non si ferma
+  const hs=inHouse('svc',c),ht=inHouse('tires',c),hr=inHouse('rev',c);
   const btns=[
-    k<=3000?`<button data-a="service" data-id="${c.id}" ${!work||S.cash<serviceCost(c)?'disabled':''} title="Ferma l'auto un giorno">Tagliando ${eur(serviceCost(c))}</button>`:'',
-    r<=60?`<button data-a="revision" data-id="${c.id}" ${!work||S.cash<REVISION_COST?'disabled':''} title="Ferma l'auto un giorno">Revisione ${eur(REVISION_COST)}</button>`:'',
-    canChangeTires(c)?`<button data-a="tires" data-id="${c.id}" ${S.cash<TIRE_COST[c.cat]?'disabled':''} title="In giornata">Monta ${tireTarget(c)} ${eur(TIRE_COST[c.cat])}</button>`:'',
+    k<=3000?(hs?`<button data-a="mservice" data-id="${c.id}" ${S.cash<hs.cost?'disabled':''} title="${hs.e.name}, ${hs.t} tempo: l'auto resta disponibile">Tagliando in sede ${eur(hs.cost)}</button>`
+      :`<button data-a="service" data-id="${c.id}" ${!work||S.cash<serviceCost(c)?'disabled':''} title="Ferma l'auto un giorno">Tagliando ${eur(serviceCost(c))}</button>`):'',
+    r<=60?(hr?`<button data-a="mrev" data-id="${c.id}" ${S.cash<hr.cost?'disabled':''} title="${hr.e.name}, ${hr.t} tempo: l'auto resta disponibile">Revisione in sede ${eur(hr.cost)}</button>`
+      :`<button data-a="revision" data-id="${c.id}" ${!work||S.cash<REVISION_COST?'disabled':''} title="Ferma l'auto un giorno">Revisione ${eur(REVISION_COST)}</button>`):'',
+    ht?`<button data-a="mtires" data-id="${c.id}" ${S.cash<ht.cost?'disabled':''} title="${ht.e.name}, ${ht.t} tempo">Monta ${tireTarget(c)} in sede ${eur(ht.cost)}</button>`
+      :canChangeTires(c)?`<button data-a="tires" data-id="${c.id}" ${S.cash<TIRE_COST[c.cat]?'disabled':''} title="In giornata">Monta ${tireTarget(c)} ${eur(TIRE_COST[c.cat])}</button>`:'',
   ].join('');
   return `<div class="maint">${iss.map(i=>`<span class="chip ${cls(i.lvl)}">${i.txt}</span>`).join(' ')}${info}${btns?`<div class="acts">${btns}</div>`:''}</div>`;
 }
@@ -40,11 +48,12 @@ export function render(){
     <div class="stat"><span class="lbl">Oggi</span><b>${wdd(S.day)}</b></div>
     <div class="stat"><span class="lbl">Incasso servizi</span><b>${eur(S.stats.svc)}</b><span class="lbl" style="letter-spacing:.04em">${S.stats.rented} noleggi</span></div>`;
   const nw=netWorth(),pct=clamp(nw/GOAL*100,0,100);
-  document.getElementById('goal').innerHTML=`<span class="lbl" title="Cassa ${eur(S.cash)} + flotta ${eur(fleetValue())} − debiti ${eur(debt())}">Patrimonio netto ${eur(nw)} / ${eur(GOAL)}</span><div class="track"><i style="width:${pct}%"></i></div><span class="num" style="font-size:13px">${Math.round(pct)}%</span>${spark()}`;
+  document.getElementById('goal').innerHTML=`<span class="lbl" title="Cassa ${eur(S.cash)} + flotta ${eur(fleetValue())}${boxValue()?` + box officina ${eur(boxValue())}`:''} − debiti ${eur(debt())}">Patrimonio netto ${eur(nw)} / ${eur(GOAL)}</span><div class="track"><i style="width:${pct}%"></i></div><span class="num" style="font-size:13px">${Math.round(pct)}%</span>${spark()}`;
   document.getElementById('banner').innerHTML=S.lost?`<div class="banner lose">Fallimento al giorno ${S.day}. La cassa è scesa sotto ${eur(-3000)}. Premi «Nuova partita» per riprovare.</div>`:S.won?`<div class="banner win">Obiettivo raggiunto! Puoi continuare a giocare per far crescere la flotta.</div>`:'';
 
   // richieste
   document.getElementById('reqcount').textContent=S.reqs.length?S.reqs.length+' in attesa · rispondi entro stasera':'';
+  const seller=bestSeller();
   document.getElementById('reqs').innerHTML=S.reqs.length?S.reqs.map(q=>{
     const pre=q.start>S.day,T=TYPES[q.type],price=pre?Math.round(S.prices[q.cat]*PRE_DISC):S.prices[q.cat],ok=price<=q.budget,rate=carRate(q);
     const free=optionsFor(q),obs=obOptions(q),opts=free.concat(obs),c=selectedCar(q),isOb=c&&obs.includes(c);
@@ -65,7 +74,8 @@ export function render(){
         ${q.reply?`<div class="reply">«${q.reply}»</div>`:''}
         <div class="req-total">Auto <b class="num">${eur(rate)}/g</b>${svcRate?` + servizi <b class="num">${eur(svcRate)}/g</b>`:''} × ${q.days} g</div>
         <div class="req-act">
-          ${canPropose?`<button data-a="propose" data-id="${q.id}">Proponi servizi</button>`:''}
+          ${canPropose?`<button data-a="propose" data-id="${q.id}" ${S.time<PROPOSE_T?'disabled title="Hai finito il tempo di oggi"':''}>Proponi servizi · ${PROPOSE_T} tempo</button>`:''}
+          ${seller&&free.length?`<button data-a="delegate" data-id="${q.id}" title="${seller.name} sceglie l'auto e propone i servizi con il suo tempo (1 + 1 per servizio)">Affida a ${seller.name.split(' ')[0]}</button>`:''}
           <button class="pri" data-a="assign" data-id="${q.id}" ${S.lost?'disabled':''}>${pre?'Prenota':'Noleggia'} ${eur(tot)}</button>
           <button data-a="decline" data-id="${q.id}" title="${pre?'Rifiutare una prenotazione che puoi servire costa 0,5 di reputazione':'Nessun calo di reputazione'}">Rifiuta</button>
         </div>`
@@ -94,6 +104,7 @@ export function render(){
       </div>
       <div class="acts"><button data-a="hist" data-id="${c.id}" aria-expanded="${!!ui.hist[c.id]}">${ui.hist[c.id]?'Chiudi storico':'Storico danni'}</button>${isFree?`
         ${c.dirty?`<button data-a="clean" data-id="${c.id}" ${S.cash<CLEAN?'disabled':''}>Lava ${eur(CLEAN)}</button>`:''}
+        ${(()=>{const hp=inHouse('repair',c);return hp?`<button data-a="mrepair" data-id="${c.id}" ${S.cash<hp.cost?'disabled':''} title="${hp.e.name}, ${hp.t} tempo: l'auto resta disponibile${!S.box.ponte&&od.length?' · solo usura, per i danni serve il ponte':''}">Ripara in sede ${eur(hp.cost)}</button>`:''})()}
         ${c.cond<100||od.length?`<button data-a="repair" data-id="${c.id}" ${(S.cash<rc||!canRepair(c))?'disabled':''} title="${canRepair(c)?`Usura ${eur(wearCost(c))} + danni ${eur(dmgRepairCost(c))} · pronta in ${repairDays(c)} g`:'Prenotata: non c\'è tempo per l\'officina'}">Officina ${eur(rc)}</button>`:''}
         ${canSell(c)?`<button class="danger ${armed?'armed':''}" data-a="sell" data-id="${c.id}">${armed?'Conferma '+eur(sv):'Vendi'}</button>`:''}`:''}
       </div>${maintRow(c)}${hist}</article>`}).join(''):`<div class="empty">Non hai auto. Comprane una dal mercato qui sotto.</div>`;
@@ -101,7 +112,8 @@ export function render(){
   renderPlan();
   renderIns();
   renderDesk();
-  renderStaff();
+  renderTeam();
+  renderCrew();
   renderTabs();
   renderSeason();
   renderEvList();

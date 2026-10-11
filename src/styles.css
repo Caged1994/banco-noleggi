@@ -284,3 +284,31 @@ select,input{font:500 13px var(--f-body);color:var(--ink);background:var(--sunk)
 .legend i{display:inline-block;width:18px;height:10px;border-radius:3px;vertical-align:middle;margin-right:5px}
 @media (prefers-reduced-motion:no-preference){.req,.car{animation:pop .25s ease-out}}
 @keyframes pop{from{transform:translateY(3px)}to{transform:none}}
+/* personale */
+.crew{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.crewchip{display:inline-grid;grid-template-columns:auto auto auto;align-items:center;gap:2px 7px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:12.5px}
+.crewchip small{color:var(--muted);font-size:11px}
+.crewchip .tbar{grid-column:1/-1;width:100%}
+.crewchip.off{opacity:.6}
+.tbar{display:inline-block;vertical-align:middle;width:64px;height:5px;background:var(--sunk);border-radius:3px;overflow:hidden}
+.tbar i{display:block;height:100%;background:var(--accent)}
+.tbar.good i{background:var(--good)}
+.emp{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:7px;min-width:0;overflow-wrap:anywhere}
+.emp .client-h b{font:700 17px/1.1 var(--f-display)}
+.emp .chip{white-space:normal}
+.emp-grid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 10px;align-items:center;font-size:13px}
+.emp-grid small{color:var(--muted);font-size:12px}
+.emp-grid b.neg{color:var(--bad)}
+.emp-grid select{max-width:240px}
+.emp-role{color:var(--muted);font-size:12px}
+.bio{font-style:italic;font-size:13.5px;color:var(--ink);border-left:3px solid var(--line);padding-left:8px}
+.vacrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-top:1px solid var(--line);padding-top:6px}
+.vacrow .lbl{flex-basis:100%}
+.vacrow select{flex:1 1 120px;min-width:0}
+.mini-x{padding:0 4px;margin-left:4px;font-size:11px;line-height:1.2;border:none;background:transparent;color:inherit}
+.emp .acts{justify-content:flex-start}
+.cand{border-style:dashed}
+.bar.off{background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
+.bar.off.sick{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.bar.off.gone{background:transparent;border-style:dashed}
+.row>button{white-space:nowrap;flex-shrink:0}

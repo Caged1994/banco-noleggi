@@ -24,6 +24,7 @@
   <nav class="tabs" role="tablist" aria-label="Sezioni" id="tabs"></nav>
 
   <section class="tabp" data-tab="banco" role="tabpanel" aria-label="Banco">
+    <div class="crew" id="crew"></div>
     <div class="cols">
       <div class="panel">
         <div class="panel-h"><h2>Al banco</h2><span class="lbl" id="reqcount"></span></div>
@@ -45,6 +46,24 @@
   <section class="tabp" data-tab="clienti" role="tabpanel" aria-label="Clienti" hidden>
     <div class="panel-h"><h2>Clienti</h2><span class="lbl">Chi è già stato servito, e quanto si fida dell'agenzia</span></div>
     <div id="clients" class="panel"></div>
+  </section>
+
+  <section class="tabp" data-tab="personale" role="tabpanel" aria-label="Personale" hidden>
+    <div class="panel-h"><h2>Personale</h2><span class="lbl" id="teamcount"></span></div>
+    <div class="cols team-cols">
+      <div class="panel">
+        <span class="lbl">In servizio</span>
+        <div id="team" class="panel"></div>
+      </div>
+      <div class="panel">
+        <span class="lbl">Candidati · nuovi ogni lunedì, pochi d'inverno e tanti in estate</span>
+        <div id="cands" class="panel"></div>
+        <section class="box">
+          <h2>Officina interna</h2>
+          <div id="box"></div>
+        </section>
+      </div>
+    </div>
   </section>
 
   <section class="tabp" data-tab="planning" role="tabpanel" aria-label="Planning" hidden>
@@ -72,16 +91,10 @@
         <span class="lbl">Prezzo al giorno per categoria</span>
         <div id="prices"></div>
       </section>
-      <div class="panel">
-        <section class="box">
-          <h2>Personale</h2>
-          <div id="staff"></div>
-        </section>
-        <section class="box">
-          <h2>Banca</h2>
-          <div id="bank"></div>
-        </section>
-      </div>
+      <section class="box">
+        <h2>Banca</h2>
+        <div id="bank"></div>
+      </section>
     </div>
   </section>
 

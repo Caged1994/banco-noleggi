@@ -9,7 +9,8 @@ import { render, setPrice } from './ui/render.js';
 import { newGame } from './sim/game.js';
 import { clean, repair, sell } from './sim/fleet.js';
 import { borrow, payoff } from './sim/bank.js';
-import { fire, hire } from './sim/staff.js';
+import { cancelVac, course, fire, grantRaise, hire, makeHappy, offerFixed, refuseRaise, scheduleVac, setRole, vacStarts } from './sim/staff.js';
+import { buyBox, buyBoxUp, crewWork, delegateProb, delegateReq, mechDo } from './sim/crew.js';
 import { assign, decline } from './sim/desk.js';
 import { propose } from './sim/services.js';
 import { buyNew, buyStock, buyUsed } from './sim/market.js';
@@ -51,7 +52,21 @@ document.addEventListener('click',e=>{
   else if(a==='dsend')overSendAway(id);
   else if(a==='psolve')probSolve(id);
   else if(a==='psend')probSendAway(id);
-  else if(a==='hire')hire(id);
+  else if(a==='hire'){const h=ui.hire[id]||{},con=h.con||'';const c=S.cands.find(x=>x.id===id);
+    const cc=con||(c&&c.wants==='stagionale'?'s1':'fisso');
+    crewWork(hire(id,h.role,cc==='fisso'?'fisso':'stagionale',cc==='fisso'?0:+cc.slice(1)));delete ui.hire[id]}
+  else if(a==='raiseok')grantRaise(id);
+  else if(a==='raiseno')refuseRaise(id);
+  else if(a==='happy')makeHappy(id);
+  else if(a==='fixed')offerFixed(id);
+  else if(a==='course')course(id);
+  else if(a==='vac'){const v=ui.vac[id]||{},e=S.staff.find(x=>x.id===id);if(e){const st=+v.start||vacStarts()[0],ln=Math.min(+v.len||Math.min(5,e.vacLeft),e.vacLeft);scheduleVac(id,st,ln);delete ui.vac[id]}}
+  else if(a==='vacdel')cancelVac(id,+b.dataset.k);
+  else if(a==='buybox')buyBox();
+  else if(a==='buyup')buyBoxUp(b.dataset.k);
+  else if(a==='delegate')delegateReq(id);
+  else if(a==='pdelegate')delegateProb(id);
+  else if(a==='mservice'||a==='mrev'||a==='mtires'||a==='mrepair'){const c=S.fleet.find(x=>x.id===id);if(c)mechDo({mservice:'svc',mrev:'rev',mtires:'tires',mrepair:'repair'}[a],c)}
   else if(a==='service')doService(id);
   else if(a==='revision')doRevision(id);
   else if(a==='tires')changeTires(id);
@@ -70,6 +85,9 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   const t=(e.target as any);
   if(t.id==='dcat'){ui.dcat=t.value;render();return}
+  if(t.tagName==='SELECT'&&t.dataset.erole){setRole(+t.dataset.erole,t.value);render();return}
+  if(t.tagName==='SELECT'&&t.dataset.hk){const h=ui.hire[+t.dataset.id]||(ui.hire[+t.dataset.id]={});h[t.dataset.hk]=t.value;render();return}
+  if(t.tagName==='SELECT'&&t.dataset.vk){const v=ui.vac[+t.dataset.id]||(ui.vac[+t.dataset.id]={});v[t.dataset.vk]=t.value;render();return}
   if(t.tagName==='SELECT'&&t.dataset.desk){ui.dsel[+t.dataset.desk]=+t.value;render();return}
   if(t.tagName==='SELECT'&&t.dataset.req){const q=+t.dataset.req;ui.sel[q]=+t.value;render();setPreview(q);return}
   if(t.type==='checkbox'&&t.dataset.q){const q=+t.dataset.q,s=t.dataset.s;const l=ui.checks[q]||(ui.checks[q]=[]);

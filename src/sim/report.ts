@@ -6,7 +6,7 @@ import { log, rep } from './ledger.js';
 import { debt } from './bank.js';
 /* ---------- report settimanale ---------- */
 export const INC_LBL={rent:'Noleggi',svc:'Servizi',damage:'Danni addebitati',interior:'Pulizie e interni',extra:'Pieni, multe e ritardi',sell:'Vendita auto'};
-export const OUT_LBL={fixed:'Affitto e assicurazioni',staff:'Stipendi',maint:'Manutenzione',loan:'Rate prestiti',repair:'Officina e soccorso',wash:'Lavaggi',refund:'Rimborsi',colleague:'Auto da colleghi',buy:'Acquisti'};
+export const OUT_LBL={fixed:'Affitto e assicurazioni',staff:'Stipendi',train:'Formazione e liquidazioni',maint:'Manutenzione',loan:'Rate prestiti',repair:'Officina e soccorso',wash:'Lavaggi',refund:'Rimborsi',colleague:'Auto da colleghi',buy:'Acquisti'};
 export function buildReport(endDay){
   const w=S.wk,sum=o=>Object.values<any>(o).reduce((a,b)=>a+b,0);
   const cars=S.fleet.map(c=>({plate:c.plate,model:c.model,cat:c.cat,inc:w.car[c.id]||0})).sort((a,b)=>b.inc-a.inc);
@@ -17,7 +17,7 @@ export function buildReport(endDay){
   if(cars.length>2&&idle&&idle.inc<OFFICE_W/7*3)tips.push(`${idle.plate} (${idle.model}) ha incassato solo ${eur(idle.inc)}: valuta di abbassare il listino ${CATS[idle.cat].nome} o di venderla.`);
   for(const s of ['seat','driver','upgrade','gps']){const x=w.svc[s];if(x&&x.prop>=4&&x.acc/x.prop<.25)tips.push(`${SVC[s].nome} accettato ${x.acc} volte su ${x.prop}: prova un prezzo più basso o proponilo ai clienti giusti.`)}
   const k=w.svc.kasko;if(k&&k.prop>=4&&k.acc/k.prop<.3)tips.push(`L'assicurazione totale è stata accettata ${k.acc} volte su ${k.prop}: i turisti e le famiglie la prendono più volentieri.`);
-  if(w.dmgLost>=500)tips.push(`Hai perso ${eur(w.dmgLost)} di danni non trovati: un addetto ai rientri riduce la penalità dei danni vecchi e dello sporco.`);
+  if(w.dmgLost>=500)tips.push(`Hai perso ${eur(w.dmgLost)} di danni non trovati: un lavaggista e un addetto ai rientri lavano e controllano le auto prima di te.`);
   else if(w.dmgMissed)tips.push(`${w.dmgMissed} dann${w.dmgMissed>1?'i':'o'} sfuggit${w.dmgMissed>1?'i':'o'} all'ispezione: pulisci le zone sporche prima di controllarle.`);
   const rl=Object.entries<any>(w.rivLost||{}).sort((a,b)=>b[1]-a[1])[0];
   if(rl&&rl[1]>=3)tips.push(`Sulle ${CATS[rl[0]].nome.toLowerCase()} sei il ${Math.round((S.prices[rl[0]]/rivalPrice(rl[0])-1)*100)}% più caro di ${RIVAL_NAME}: ${rl[1]} clienti sono andati da lei.`);

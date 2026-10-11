@@ -3,6 +3,7 @@ import { newRival } from '../sim/rival.js';
 import { SAVE, SVC } from '../data/catalog.js';
 import { S, ui, setState } from '../core/state.js';
 import { newGame } from '../sim/game.js';
+import { migrateStaff } from '../sim/staff.js';
 import { loadTab } from '../ui/tabs.js';
 import { genMarket } from '../sim/market.js';
 import { render } from '../ui/render.js';
@@ -19,9 +20,10 @@ export function start(data){
   if(!S.clients)S.clients=[];
   if(!S.rival)S.rival=newRival();
   S.fleet.forEach(c=>{if(c.svcKm==null)initMaint(c,'used')});
+  migrateStaff();
   ui.tab=ui.tab||loadTab();
   if(S.market.some(m=>!m.dealer))genMarket();
   ui.dealer=ui.dealer||'gino';
-  ui.zone=ui.zone||{};ui.dsel=ui.dsel||{};ui.hist=ui.hist||{};ui.dcat=ui.dcat||'berlina';
+  ui.zone=ui.zone||{};ui.dsel=ui.dsel||{};ui.hist=ui.hist||{};ui.dcat=ui.dcat||'berlina';ui.hire=ui.hire||{};ui.vac=ui.vac||{};
   render();
 }

@@ -47,6 +47,38 @@ const { rivalPrice } = await mod('sim/rival.js');
 const maintOn = process.env.MAINT !== 'off';
 const M = await mod('sim/maintenance.js');
 const games = Number(process.argv[3] ?? 3);
+// STAFF=off → il bot lavora da solo, senza dipendenti né box
+const staffOn = process.env.STAFF !== 'off';
+const ST = await mod('sim/staff.js');
+const CR = await mod('sim/crew.js');
+const SD = await mod('data/staffdata.js');
+const hint = (c, role) => SD.BIO_ROLE[role].some((t) => c.bio.includes(t));
+// Il bot assume secondo la flotta: lavaggista da 5 auto, addetto ai rientri da 6, venditore da 8, box e meccanico da 8 con la cassa.
+function botStaff(S, idle) {
+  for (const e of S.staff) if (e.raise) ST.grantRaise(e.id);
+  for (const e of [...S.staff]) {
+    if (ST.inProbation(e) && e.aptKnown[e.role] && ST.aptOf(e) < 0.85) ST.fire(e.id);
+    if (e.contract === 'stagionale' && e.until - S.day <= 7) ST.offerFixed(e.id);
+  }
+  if (!S.box.own && S.fleet.length >= 8 && S.cash > 12000) CR.buyBox();
+  if (S.box.own && !S.box.diag && S.cash > 9000) CR.buyBoxUp('diag');
+  if (S.box.own && !S.box.ponte && S.cash > 8000) CR.buyBoxUp('ponte');
+  const want = [];
+  if (S.fleet.length >= 5) want.push('lavaggio');
+  if (S.fleet.length >= 6) want.push('rientri');
+  if (S.fleet.length >= 8) want.push('vendite');
+  if (S.box.own) want.push('meccanico');
+  for (const role of want) {
+    if (ST.staffOf(role).length) continue;
+    const c = S.cands.find((x) => x.trained && x.role === role) || S.cands.find((x) => !x.trained && hint(x, role))
+      || (idle[role] > 14 ? S.cands.find((x) => !x.trained) : null);
+    idle[role] = (idle[role] || 0) + 1;
+    if (!c) continue;
+    const con = c.wants === 'stagionale' ? 'stagionale' : 'fisso';
+    CR.crewWork(ST.hire(c.id, role, con, 3));
+    idle[role] = 0;
+  }
+}
 
 function check(S) {
   if (!Number.isFinite(S.cash)) throw new Error(`cassa non valida il giorno ${S.day}: ${S.cash}`);
@@ -63,30 +95,38 @@ for (let g = 1; g <= games; g++) {
   let S = st.S;
   for (const k of Object.keys(S.prices)) S.prices[k] = Math.round(S.prices[k] * priceMul);
   const perMonth = {};
-  let bought = 0, occ = 0, occDays = 0, minCash = Infinity, day100 = null;
+  let bought = 0, occ = 0, occDays = 0, minCash = Infinity, day100 = null, staffMax = 0;
+  const idle = {};
   for (let i = 0; i < days && !S.lost; i++) {
     const m = dateOf(S.day).m;
     perMonth[m] ??= { req: 0, days: 0 };
     perMonth[m].req += S.reqs.length;
     perMonth[m].days++;
 
+    if (staffOn) botStaff(S, idle);
+    staffMax = Math.max(staffMax, S.staff.length);
     for (const k of [...S.desk]) {
       if (k.kind === 'over') (swapOptions(k.b).length ? overSwap : overColleague)(k.id);
+      else if ((k.ptype !== 'ritardo' || probOptions(k).length) && CR.bestSeller()) CR.delegateProb(k.id);
       else if (k.ptype !== 'ritardo' || probOptions(k).length) probSolve(k.id);
       else probSendAway(k.id);
     }
     if (followRival) for (const k of Object.keys(S.prices)) S.prices[k] = Math.round(rivalPrice(k) * priceMul);
     if (maintOn) for (const c of S.fleet) {
-      if (M.kmToService(c) <= 800 && M.canWork(c)) M.doService(c.id);
-      if (M.revDaysLeft(c) <= 20 && M.canWork(c)) M.doRevision(c.id);
+      if (M.kmToService(c) <= 800 && !CR.mechDo('svc', c, true) && M.canWork(c)) M.doService(c.id);
+      if (M.revDaysLeft(c) <= 20 && !CR.mechDo('rev', c, true) && M.canWork(c)) M.doRevision(c.id);
       const want = M.inWinter(S.day + 12) ? 'invernali' : 'estive';
-      if (c.tires !== want && M.canChangeTires(c)) M.changeTires(c.id, true);
+      if (c.tires !== want && !CR.mechDo('tires', c, true) && M.canChangeTires(c)) M.changeTires(c.id, true);
     }
     for (const c of S.fleet) if (c.dirty && freeNow(c)) clean(c.id);
     for (const q of [...S.reqs]) {
       if (!optionsFor(q).length) continue;
-      st.ui.checks[q.id] = q.type === 'famiglia' ? ['seat', 'kasko'] : ['kasko', 'gps'];
-      propose(q.id);
+      if (CR.bestSeller(3)) { CR.delegateReq(q.id); continue; }
+      // proporre costa 1 tempo: il bot tiene il tempo che serve per le ispezioni (circa 3 per auto rientrata)
+      if (S.time > S.ins.length * 3) {
+        st.ui.checks[q.id] = q.type === 'famiglia' ? ['seat', 'kasko'] : ['kasko', 'gps'];
+        propose(q.id);
+      }
       assign(q.id);
     }
     for (const it of [...S.ins]) {
@@ -96,7 +136,7 @@ for (let g = 1; g <= games; g++) {
     }
     for (const c of S.fleet) {
       if (c.dirty && freeNow(c)) clean(c.id);
-      if ((c.cond < 60 || visiblyDamaged(c)) && S.cash > repairCost(c) + 800) repair(c.id);
+      if ((c.cond < 60 || visiblyDamaged(c)) && !CR.mechDo('repair', c, true) && S.cash > repairCost(c) + 800) repair(c.id);
     }
     const offer = S.market.filter((o) => o.dealer === 'gino' || o.dealer === 'flotte').sort((a, b) => a.price - b.price)[0];
     if (offer && S.cash > offer.price + 4000 && S.fleet.length < 14) { buyUsed(offer.id); bought++; }
@@ -113,6 +153,10 @@ for (let g = 1; g <= games; g++) {
   console.log(`  clienti al giorno: ${demand}`);
   const maintCost = S.reports.reduce((a, r) => a + (r.out.maint || 0), 0);
   console.log(`  manutenzione: €${Math.round(maintCost)} nell'anno`);
+  const wagesY = S.reports.reduce((a, r) => a + (r.out.staff || 0), 0);
+  const repY = S.reports.reduce((a, r) => a + (r.out.repair || 0), 0), washY = S.reports.reduce((a, r) => a + (r.out.wash || 0), 0);
+  const inY = S.reports.reduce((a, r) => a + r.totIn, 0), svcY = S.reports.reduce((a, r) => a + (r.inc.svc || 0), 0), dmgY = S.reports.reduce((a, r) => a + (r.inc.damage || 0) + (r.inc.interior || 0), 0);
+  console.log(`  personale: ${S.staff.map((e) => `${SD.ROLES[e.role].nome.toLowerCase()} liv.${ST.lvOf(e)}`).join(', ') || 'nessuno'} · massimo ${staffMax} · ultime 12 settimane: entrate €${Math.round(inY)} (servizi €${Math.round(svcY)}, danni €${Math.round(dmgY)}), stipendi €${Math.round(wagesY)}, officina €${Math.round(repY)}, lavaggi €${Math.round(washY)}${S.box.own ? ' · box officina' : ''}`);
   console.log(`  auto fuori a noleggio in media: ${Math.round(occ / occDays * 100)}% · cassa minima €${Math.round(minCash)} · obiettivo €100.000 ${day100 ? 'raggiunto il giorno ' + day100 : 'non raggiunto'}`);
   const tiers = { fedele: 0, abituale: 0, nuovo: 0, perso: 0 };
   for (const c of S.clients) tiers[tierOf(c)]++;

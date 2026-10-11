@@ -4,7 +4,8 @@ import { svcBlock, svcPrice } from '../sim/services.js';
 import { eur } from '../core/util.js';
 import { insCar, intLabel, zoneChance, zoneSure } from '../sim/inspection.js';
 import { dmgLabel, openDmgs, zoneOld } from '../sim/fleet.js';
-import { dailyTime, salesBoost } from '../sim/staff.js';
+import { PLAYER_TIME } from '../sim/staff.js';
+import { bestSeller, sellMul } from '../sim/crew.js';
 import { dshort, wdd } from '../core/calendar.js';
 import { carFor, colleagueCost, prepaid, probOptions, probPrice, swapOptions } from '../sim/pickups.js';
 import { activeEvents } from '../sim/seasons.js';
@@ -64,7 +65,7 @@ export function renderIns(){
   const box=document.getElementById('ins');
   const msg=ui.insMsg?`<div class="banner ${ui.insMsg.kind}" role="status" style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start"><span>${ui.insMsg.txt}</span><button data-a="imsg" aria-label="Chiudi messaggio" style="padding:4px 8px">✕</button></div>`:'';
   if(!S.ins.length){box.innerHTML=msg;return}
-  box.innerHTML=msg+`<div class="panel-h"><h2>Rientri da ispezionare</h2><span class="lbl">Tempo addetto oggi <b class="num" style="color:${S.time?'var(--ink)':'var(--bad)'}">${S.time}/${dailyTime()}</b></span></div>`+S.ins.map(it=>{
+  box.innerHTML=msg+`<div class="panel-h"><h2>Rientri da ispezionare</h2><span class="lbl">Il tuo tempo oggi <b class="num" style="color:${S.time?'var(--ink)':'var(--bad)'}">${S.time}/${PLAYER_TIME}</b></span></div>`+S.ins.map(it=>{
     const k=ui.zone[it.id],z=k&&it.zones[k];
     const found=ZONE_KEYS.some(x=>it.zones[x].st==='found');
     const checked=ZONE_KEYS.filter(x=>it.zones[x].st!=='none').length;
@@ -80,7 +81,7 @@ export function renderIns(){
         ${z.st==='unsure'&&!it.kasko?`<button class="danger" data-a="igamble" data-id="${it.id}" title="Se non c'è un danno nuovo il cliente contesta: −2 reputazione">Addebita lo stesso · se sbagli −2 rep.</button>`:''}`:''}
       </div>`;
     return `<article class="ins">
-      <div class="ins-h"><b>${it.plate}</b><span>${it.model} · riconsegnata da ${it.cust}</span>${it.kasko?'<span class="chip c-ok">Assicurazione totale · danni coperti</span>':'<span class="chip c-warn">Senza assicurazione · franchigia addebitabile</span>'}</div>
+      <div class="ins-h"><b>${it.plate}</b><span>${it.model} · riconsegnata da ${it.cust}</span>${it.washedBy||it.checkedBy?`<span class="chip c-acc">${[it.washedBy?'lavata da '+it.washedBy:'',it.checkedBy?'primo controllo di '+it.checkedBy:''].filter(Boolean).join(' · ')}</span>`:''}${it.kasko?'<span class="chip c-ok">Assicurazione totale · danni coperti</span>':'<span class="chip c-warn">Senza assicurazione · franchigia addebitabile</span>'}</div>
       <div class="ins-body">${carSvg(it)}
         <div class="ins-side">${side}
           <div style="border-top:1px solid var(--line);padding-top:8px;display:grid;gap:6px">
@@ -114,7 +115,7 @@ export function renderDesk(){
     const P=PROBS[k.ptype],c=carFor(b),opts=probOptions(k),sel=opts.find(x=>x.id===ui.dsel[k.id])||opts[0];
     const can=k.ptype!=='ritardo'||opts.length;
     const detail=k.ptype==='deposito'?`${eur(KASKO[c.cat])}/g × ${b.days} g`:k.ptype==='patente'?`listino ${eur(S.prices[c.cat])}/g × ${b.days} g`:`${eur(S.sprices.upgrade)}/g × ${b.days} g`;
-    const chance=Math.round(Math.min(.95,P.acc*salesBoost())*100);
+    const chance=Math.round(Math.min(.95,P.acc)*100),sl=bestSeller(),slc=sl?Math.round(Math.min(.95,P.acc*sellMul(sl))*100):0;
     return `<article class="req case">
       <div class="req-top"><span class="req-name">${b.cust}</span><span class="chip c-warn">${P.nome}</span></div>
       <div class="req-meta">${per} · ${c?c.plate+' '+c.model:''}</div>
@@ -123,6 +124,7 @@ export function renderDesk(){
       <div class="req-total">Soluzione: <b>${P.sol}</b> · ${detail} = <b class="num">${eur(probPrice(k))}</b> · accetta circa ${chance}% delle volte</div>
       <div class="req-act">
         ${can?`<button class="pri" data-a="psolve" data-id="${k.id}">Proponi soluzione · +${eur(probPrice(k))}</button>`:''}
+        ${can&&sl?`<button data-a="pdelegate" data-id="${k.id}" title="Usa 1 tempo di ${sl.name}">Affida a ${sl.name.split(' ')[0]} · circa ${slc}%</button>`:''}
         <button data-a="psend" data-id="${k.id}">Manda via · trattieni ${eur(prepaid(b))}</button>
       </div></article>`;
   }).join('');

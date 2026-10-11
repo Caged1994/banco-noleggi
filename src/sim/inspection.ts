@@ -3,7 +3,7 @@ import { CLEAN_INT, DMG_CAT, ZONE_KEYS, ZSU, dmgCost } from '../data/catalog.js'
 import { R, clamp, eur } from '../core/util.js';
 import { dmgLabel, rollDamage, zoneOld } from './fleet.js';
 import { S, ui } from '../core/state.js';
-import { attento, rientriLv } from './staff.js';
+import { aptOf, hasTrait, lvOf, useTime } from './staff.js';
 import { log, money, rep } from './ledger.js';
 /* ---------- ispezione ai rientri ---------- */
 // ogni zona: dirty (sporca) e st: none (da controllare) · ok (nessun danno visto) · unsure (sporca, non si capisce) · found (danno trovato)
@@ -22,33 +22,41 @@ export function newInspection(c,b){
 }
 export const insCar=it=>S.fleet.find(c=>c.id===it.car);
 // probabilità di trovare un danno nuovo nella zona: cala con lo sporco e con i danni vecchi non riparati
-export function zoneChance(it,k,dirtyOverride?){
-  const z=it.zones[k],dirty=dirtyOverride!=null?dirtyOverride:z.dirty,L=rientriLv(),att=attento();
+// by: dipendente che controlla (null = il giocatore). Livello, attitudine e tratti cambiano la probabilità.
+export function zoneChance(it,k,dirtyOverride?,by?){
+  const z=it.zones[k],dirty=dirtyOverride!=null?dirtyOverride:z.dirty;
   const c=insCar(it),old=c?zoneOld(c,k):0;
-  let p=(dirty?P_DIRTY:P_CLEAN)+.03*L+(att?(dirty?.12:.07):0);
-  const pen=(dirty?.10:.15)*Math.max(.25,1-.25*L)*(att?.5:1);
+  let p=dirty?P_DIRTY:P_CLEAN,pen=dirty?.10:.15;
+  if(by){
+    const L=lvOf(by),att=hasTrait(by,'Attento');
+    p+=.025*L+(aptOf(by)-1)*.2+(att?(dirty?.12:.07):0)+(hasTrait(by,'Pignolo')?.04:0)-(hasTrait(by,'Pasticcione')?.1:0);
+    pen*=Math.max(.25,1-.15*L)*(att?.5:1);
+  }
   return clamp(p-old*pen,.05,.97);
 }
-export function insCheck(id,k,wash){
+export function insCheck(id,k,wash,by=null){
   const it=S.ins.find(x=>x.id===id);if(!it)return;
   const z=it.zones[k],cost=wash?2:1;
-  if(S.time<cost||z.st==='found')return;
-  S.time-=cost;it.acted=true;
+  if((by?by.time:S.time)<cost||z.st==='found')return;
+  if(by)useTime(by,cost);else S.time-=cost;
+  it.acted=true;
   if(wash)z.dirty=false;
-  const pr=zoneChance(it,k),hit=it.dmg&&it.dmg.zone===k&&Math.random()<pr;
+  const pr=zoneChance(it,k,undefined,by),hit=it.dmg&&it.dmg.zone===k&&Math.random()<pr;
   z.checks=(z.checks||0)+1;
-  if(hit){z.st='found';z.last=`${wash?'Pulita e controllata':'Controllo '+z.checks}: trovato ${dmgLabel(it.dmg).toLowerCase()}, listino ${eur(it.dmg.cost)}.`;return}
+  const who=by?`Primo controllo di ${by.name.split(' ')[0]}`:wash?'Pulita e controllata':'Controllo '+z.checks;
+  if(hit){z.st='found';z.last=`${who}: trovato ${dmgLabel(it.dmg).toLowerCase()}, listino ${eur(it.dmg.cost)}.`;return}
   z.esc=(z.esc??1)*(1-pr);
   const old=insCar(it)?zoneOld(insCar(it),k):0;
   z.st=(z.dirty||old)?'unsure':'ok';
-  z.last=`${wash?'Pulita e controllata':'Controllo '+z.checks}: nessun danno nuovo trovato${z.dirty?' (la zona è ancora sporca)':old?' (i danni vecchi possono nasconderne uno nuovo)':''}.`;
+  z.last=`${who}: nessun danno nuovo trovato${z.dirty?' (la zona è ancora sporca)':old?' (i danni vecchi possono nasconderne uno nuovo)':''}.`;
 }
 // probabilità che un danno, se c'era, sia già stato trovato
 export const zoneSure=z=>Math.round((1-(z.esc??1))*100);
 export function insMsg(txt,kind){ui.insMsg={txt,kind}}
-export function insCheckInt(id){
-  const it=S.ins.find(x=>x.id===id);if(!it||!it.int||it.int.st!=='none'||S.time<1)return;
-  S.time-=1;it.acted=true;it.int.st='checked';
+export function insCheckInt(id,by=null){
+  const it=S.ins.find(x=>x.id===id);if(!it||!it.int||it.int.st!=='none'||(by?by.time:S.time)<1)return;
+  if(by)useTime(by,1);else S.time-=1;
+  it.acted=true;it.int.st='checked';if(by)it.int.by=by.name.split(' ')[0];
 }
 export const intLabel=i=>i.cond==='sporchi'?'Pulizia interna straordinaria':`Interni rovinati ${i.sev}`;
 export function insGamble(id,k){

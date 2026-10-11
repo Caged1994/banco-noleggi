@@ -5,6 +5,8 @@ import { bar, svcTag } from './common.js';
 import { STOCK, freeNow, usedOn } from '../sim/fleet.js';
 import { surname, svcNames } from '../core/util.js';
 import { selectedCar } from '../sim/desk.js';
+import { ROLES } from '../data/staffdata.js';
+import { lvOf } from '../sim/staff.js';
 export function renderPlan(){
   const days=[...Array(H)].map((_,i)=>S.day+i);
   const cls=(d,i)=>i===0?' today':isWE(d)?' we':'';
@@ -30,6 +32,18 @@ export function renderPlan(){
   for(const kind of ['seat','gps']){const K=STOCK[kind];
     const row=days.map((d,i)=>{const f=S[K.key]-usedOn(kind,d);return `<div class="pc${cls(d,i)}" style="grid-column:${i+2};display:flex;align-items:center;justify-content:center;font:600 11px var(--f-mono);color:${f<=0?'var(--bad)':'var(--muted)'}">${f}</div>`}).join('');
     html+=`<div class="pcat"><b>${K.plur}</b><span>${S[K.key]} in magazzino · disponibili per giorno</span></div><div class="prow"><div class="pl"><small>Liberi</small></div>${row}</div>`;}
+  // personale: ferie, malattie, corsi e fine dei contratti stagionali
+  if(S.staff.length){
+    html+=`<div class="pcat"><b>Personale</b><span>${S.staff.length} dipendent${S.staff.length>1?'i':'e'} · assenze nei prossimi 14 giorni</span></div>`;
+    for(const e of S.staff){
+      let bars='';
+      e.vac.forEach(v=>bars+=bar('off',v.start,v.end,'Ferie',`Ferie di ${e.name} fino al ${wdd(v.end-1)}`));
+      if(e.sick&&e.sick.end>S.day)bars+=bar('off sick',e.sick.start,e.sick.end,'Malattia',`${e.name} in malattia fino al ${wdd(e.sick.end-1)}`);
+      if(e.course&&e.course.end>S.day)bars+=bar('book',e.course.start,e.course.end,'Corso',`${e.name} al corso fino al ${wdd(e.course.end-1)}`);
+      if(e.contract==='stagionale')bars+=bar('off gone',e.until,e.until+H,'Fine contratto',`Il contratto stagionale di ${e.name} finisce il ${wdd(e.until)}`);
+      html+=`<div class="prow"><div class="pl"><b>${e.name.split(' ')[0]}</b><small>${ROLES[e.role].nome} · liv. ${lvOf(e)}</small></div>${cells}${bars}</div>`;
+    }
+  }
   document.getElementById('plan').innerHTML=html;
 }
 export function setPreview(reqId){

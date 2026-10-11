@@ -5,14 +5,15 @@ import { freeNow, visiblyDamaged } from '../sim/fleet.js';
 import { activeEvents, evCatsTxt, evMul, evTypesTxt, seasonOf } from '../sim/seasons.js';
 import { clamp, eur } from '../core/util.js';
 import { dlong, dshort } from '../core/calendar.js';
-export const TABS=[['banco','Banco'],['flotta','Flotta'],['clienti','Clienti'],['planning','Planning'],['acquisti','Acquisti'],['gestione','Gestione'],['registro','Registro']];
+export const TABS=[['banco','Banco'],['flotta','Flotta'],['clienti','Clienti'],['personale','Personale'],['planning','Planning'],['acquisti','Acquisti'],['gestione','Gestione'],['registro','Registro']];
 export function loadTab(){try{const t=localStorage.getItem('banco-noleggi-tab');return TABS.some(x=>x[0]===t)?t:'banco'}catch(e){return 'banco'}}
 export function saveTab(t){try{localStorage.setItem('banco-noleggi-tab',t)}catch(e){}}
 export function renderTabs(){
   const todo=S.reqs.length+S.ins.length+S.desk.length;
   const fleetWarn=S.fleet.filter(c=>(freeNow(c)&&(c.dirty||visiblyDamaged(c)||c.cond<50))||maintIssues(c).some(i=>i.lvl==='bad')).length;
   const upcoming=S.events.filter(e=>e.end>S.day).length;
-  const badge={banco:todo?[todo,'']:null,flotta:fleetWarn?[fleetWarn,'warn']:null,registro:upcoming?[upcoming,'warn']:null};
+  const asks=S.staff.filter(e=>e.raise).length;
+  const badge={personale:asks?[asks,'warn']:null,banco:todo?[todo,'']:null,flotta:fleetWarn?[fleetWarn,'warn']:null,registro:upcoming?[upcoming,'warn']:null};
   document.getElementById('tabs').innerHTML=TABS.map(([k,l])=>`<button class="tab" role="tab" id="tab-${k}" data-tab="${k}" aria-selected="${ui.tab===k}">${l}${badge[k]?`<span class="badge ${badge[k][1]}">${badge[k][0]}</span>`:''}</button>`).join('');
   document.querySelectorAll<HTMLElement>('.tabp').forEach(el=>el.hidden=el.dataset.tab!==ui.tab);
 }

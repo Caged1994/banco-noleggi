@@ -5,7 +5,7 @@ import { canOverbook, eligible, freeRange, isUpgrade, visiblyDamaged } from './f
 import { PRE_DISC } from '../data/catalog.js';
 import { includedSvc, svcPrice } from './services.js';
 import { log, money, rep, wkSvc } from './ledger.js';
-import { staffOf } from './staff.js';
+import { hasTrait } from './staff.js';
 import { wdd } from '../core/calendar.js';
 import { eur } from '../core/util.js';
 /* ---------- azioni ---------- */
@@ -16,7 +16,8 @@ export function selectedCar(q){
   const opts=allOptions(q);if(!opts.length)return null;
   return opts.find(c=>c.id===ui.sel[q.id])||opts[0];
 }
-export function assign(reqId){
+// by: venditore che ha servito il cliente (null = il giocatore)
+export function assign(reqId,by=null){
   const q=S.reqs.find(r=>r.id===reqId);if(!q)return;
   const c=selectedCar(q);
   if(!c||!eligible(q,c))return;
@@ -44,7 +45,8 @@ export function assign(reqId){
   loyal(cl.id,fl,extra.length?'noleggio: '+extra.join(', '):'noleggio senza problemi');
   if(disc)extra.push('sconto');
   if(ob)extra.push('overbooking');
-  r+=0.3*staffOf('vendite').filter(x=>x.trait==='Gentile').length;
+  if(by&&hasTrait(by,'Gentile'))r+=0.3;
+  if(by)extra.push('servito da '+by.name.split(' ')[0]);
   rep(r);
   const when=q.start===S.day?`da oggi per ${q.days} g`:`dal ${wdd(q.start)} al ${wdd(q.start+q.days)}`;
   log(`${q.name}: ${c.model} ${c.plate} ${when}, +${eur(tot)}`+(svcRate?` di cui servizi ${eur(svcRate*q.days)}`:'')+(extra.length?' ('+extra.join(', ')+')':''),'in');
