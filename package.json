@@ -1,0 +1,19 @@
+{
+  "name": "banco-noleggi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gestionale 2D di autonoleggio: flotta, clienti, servizi, ispezioni, stagioni.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "simulate": "node scripts/simulate.mjs",
+    "test": "node scripts/build.mjs && node scripts/simulate.mjs 365 3"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
