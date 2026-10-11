@@ -1,3 +1,4 @@
+import { RIVAL_NAME, RIVAL_SLOGAN, rivalPrice } from '../sim/rival.js';
 import { renderClients, tierChip } from './clients.js';
 import { S, ui } from '../core/state.js';
 import { clamp, eur, svcNames } from '../core/util.js';
@@ -96,7 +97,9 @@ export function render(){
 
   // listino
   const stepper=(key,val,step,label)=>`<div class="stepper"><button data-a="price" data-k="${key}" data-d="-${step}" aria-label="Riduci">−</button><input id="price-${key.replace(':','-')}" class="num" type="number" min="1" step="1" value="${val}" data-k="${key}" aria-label="Prezzo ${label}"><button data-a="price" data-k="${key}" data-d="${step}" aria-label="Aumenta">+</button></div>`;
-  document.getElementById('prices').innerHTML=CAT_KEYS.map(k=>`<div class="row"><div class="l">${CATS[k].nome}<small>Media di mercato ${eur(CATS[k].base)}/g</small></div>${stepper(k,S.prices[k],5,CATS[k].nome)}</div>`).join('')
+  const rivTxt=k=>{const r=rivalPrice(k),d=Math.round((S.prices[k]/r-1)*100);return `${RIVAL_NAME} ${eur(r)}/g · <span style="color:${d>10?'var(--bad)':d<-5?'var(--good)':'var(--muted)'}">${d>0?'sei il '+d+'% più caro':d<0?'sei il '+(-d)+'% più economico':'stesso prezzo'}</span>`};
+  document.getElementById('prices').innerHTML=`<div class="rival"><b>Concorrenza: ${RIVAL_NAME}</b><span class="slogan">${RIVAL_SLOGAN}</span><small>Catena low cost davanti alla stazione. Se sei più caro, una parte dei clienti va da lei (i fedeli mai); se sei più economico, qualche suo cliente viene da te. Ogni lunedì adegua i prezzi ai tuoi.</small></div>`
+    +CAT_KEYS.map(k=>`<div class="row"><div class="l">${CATS[k].nome}<small>Media di mercato ${eur(CATS[k].base)}/g</small><small>${rivTxt(k)}</small></div>${stepper(k,S.prices[k],5,CATS[k].nome)}</div>`).join('')
     +`<span class="lbl" style="display:block;margin-top:10px">Servizi al giorno</span>`
     +FIXED_SVC.map(s=>`<div class="row"><div class="l">${SVC[s].nome}<small>Uguale per ogni auto · abituale ${eur(SVC[s].std)}/g</small></div>${stepper('svc:'+s,S.sprices[s],1,SVC[s].nome)}</div>`).join('')
     +`<div class="row"><div class="l">Assicurazione totale<small>Tariffa fissa per tipo di veicolo</small></div></div>`

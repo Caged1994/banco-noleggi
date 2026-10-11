@@ -1,3 +1,4 @@
+import { dateOf } from '../core/calendar.js';
 import { S, ui } from '../core/state.js';
 import { RI, eur, pick, wpick } from '../core/util.js';
 import { CATS } from '../data/catalog.js';
@@ -32,7 +33,8 @@ export function genMarket(){
   S.market=[];
   for(const D of DEALERS){
     if(D.isNew)continue;
-    for(let i=0;i<D.n;i++){
+    const extra=D.id==='flotte'&&dateOf(S.day).m===8?2:0; // a settembre AutoSprint rivende la flotta estiva
+    for(let i=0;i<D.n+extra;i++){
       const cat=wpick(D.cats),cond=RI(D.cond[0],D.cond[1]),km=RI(D.km[0],D.km[1])*1000;
       const o:any={id:S.nid++,dealer:D.id,cat,model:pick(CATS[cat].models),cond,km,dmgN:RI(D.dmg[0],D.dmg[1])};
       const pm=carPriceMul(S.day);

@@ -1,3 +1,4 @@
+import { newRival } from '../sim/rival.js';
 import { SAVE, SVC } from '../data/catalog.js';
 import { S, ui, setState } from '../core/state.js';
 import { newGame } from '../sim/game.js';
@@ -15,6 +16,7 @@ export function start(data){
   if(S.gpsN==null)S.gpsN=2;
   if(!S.events)S.events=[];
   if(!S.clients)S.clients=[];
+  if(!S.rival)S.rival=newRival();
   ui.tab=ui.tab||loadTab();
   if(S.market.some(m=>!m.dealer))genMarket();
   ui.dealer=ui.dealer||'gino';

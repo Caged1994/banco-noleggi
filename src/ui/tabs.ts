@@ -1,3 +1,4 @@
+import { rivalStatus } from '../sim/rival.js';
 import { S, ui } from '../core/state.js';
 import { freeNow, visiblyDamaged } from '../sim/fleet.js';
 import { activeEvents, evCatsTxt, evMul, evTypesTxt, seasonOf } from '../sim/seasons.js';
@@ -21,7 +22,8 @@ export function renderSeason(){
   document.getElementById('season').innerHTML=`<span class="sn">${se.nome}</span>
     <span title="${se.desc}"><span class="meter" aria-hidden="true">${[...Array(7)].map((_,i)=>`<i class="${i<lvl?'on':''}"></i>`).join('')}</span> ${lbl}</span>
     ${live.map(e=>`<span class="evchip live" title="${e.desc}"><b>${e.nome}</b><small>in corso fino al ${dshort(e.end-1)}</small></span>`).join('')}
-    ${next.map(e=>`<span class="evchip" title="${e.desc}"><b>${e.nome}</b><small>dal ${dshort(e.start)} · tra ${e.start-S.day} g</small></span>`).join('')}`;
+    ${next.map(e=>`<span class="evchip" title="${e.desc}"><b>${e.nome}</b><small>dal ${dshort(e.start)} · tra ${e.start-S.day} g</small></span>`).join('')}
+    ${rivalStatus().map(r=>`<span class="evchip ${r.live?(r.good?'good':'live'):''}"><b>${r.nome}</b><small>${r.txt}</small></span>`).join('')}`;
   document.getElementById('today').textContent=dlong(S.day)+' · '+se.desc;
 }
 export function renderEvList(){

@@ -37,6 +37,7 @@ export function renderReport(){
         <div class="rline"><span>Clienti serviti male o ignorati</span><span>${r.ignored}</span></div>
         <div class="rline"><span>Prenotazioni non presentate</span><span>${r.noshow||0}</span></div>
         <div class="rline"><span>Problemi al ritiro risolti / andati via</span><span>${r.probSolved||0} / ${r.probLeft||0}</span></div>
+        <div class="rline"><span>Clienti andati da AutoSprint / arrivati da lei</span><span>${Object.values<any>(r.rivLost||{}).reduce((a,b)=>a+b,0)} / ${r.rivWon||0}</span></div>
         <div class="rline"><span>Clienti tornati / persi</span><span>${r.clBack||0} / ${r.clLost||0}</span></div>
         <div class="rline"><span>Overbooking risolti / rimandati a casa</span><span>${r.overOk||0} / ${r.overBad||0}</span></div>
         <div class="rline"><span>Ispezioni fatte</span><span>${r.dmg.inspected}</span></div>

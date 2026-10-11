@@ -228,6 +228,13 @@ select,input{font:500 13px var(--f-body);color:var(--ink);background:var(--sunk)
 .evrow:first-child{border-top:0}
 .evrow .when{font:600 11.5px var(--f-mono);color:var(--muted);white-space:nowrap}
 .evrow small{color:var(--muted);display:block}
+/* concorrenza */
+.rival{display:grid;gap:2px;padding:10px 12px;background:var(--sunk);border-radius:8px;margin-bottom:6px}
+.rival b{font:700 17px/1.1 var(--f-display)}
+.rival .slogan{font-style:italic;font-size:13px}
+.rival small{color:var(--muted);font-size:12.5px}
+#prices .row .l small+small{margin-top:1px}
+.evchip.good{border-color:var(--good);background:var(--good-bg)}
 /* clienti */
 .client{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px;min-width:0}
 .client-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}

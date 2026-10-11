@@ -1,3 +1,4 @@
+import { rivalDaily, rivalWeekly } from './rival.js';
 import { loyal } from './regulars.js';
 import { S, ui } from '../core/state.js';
 import { insClose, newInspection } from './inspection.js';
@@ -74,6 +75,8 @@ export function nextDay(){
   if(isSun(d))S.wk=newWeek();
   if((nd-1)%7===0){genCands();log('Nuovi candidati per il personale disponibili questa settimana.')}
   planEvents();
+  if((nd-1)%7===0)rivalWeekly();
+  rivalDaily();
   for(const e of S.events)if(e.start===nd)log(`Oggi inizia: ${e.nome}.`,'hdr');
   processPickups(nd);
   S.hist.push(Math.round(S.cash));if(S.hist.length>60)S.hist.shift();
