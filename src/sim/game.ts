@@ -13,7 +13,7 @@ import { debt, fleetValue } from './bank.js';
 import { boxValue } from './crew.js';
 export function newGame(){
   setState({day:1,cash:8000,rep:50,seats:2,gpsN:2,fleet:[],reqs:[],market:[],prices:{},sprices:{},log:[],hist:[8000],nid:1,won:false,lost:false,
-     today:{in:0,out:0},stats:{rented:0,lost:0,svc:0},ins:[],reports:[],time:10,staff:[],cands:[],desk:[],loans:[],events:[],clients:[],box:{own:false,ponte:false,diag:false,posto:false}});
+     today:{in:0,out:0},stats:{rented:0,lost:0,svc:0},ins:[],reports:[],time:10,staff:[],cands:[],desk:[],loans:[],events:[],clients:[],box:{own:false,ponte:false,diag:false,posto:false},spare:{},todayInc:[]});
   S.rival=newRival();
   S.wk=newWeek();
   CAT_KEYS.forEach(k=>S.prices[k]=CATS[k].base);

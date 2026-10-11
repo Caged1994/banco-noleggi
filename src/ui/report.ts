@@ -31,6 +31,7 @@ export function renderReport(){
       <section class="rsec"><h3>Noleggi per categoria</h3>${cats}</section>
       <section class="rsec"><h3>Servizi · ${svcShare}% degli incassi</h3>${svcs}</section>
       <section class="rsec"><h3>Incasso per auto</h3>${cars}</section>
+      ${r.incs&&r.incs.length?`<section class="rsec"><h3>Imprevisti · ${r.incs.length}</h3>${r.incs.map(t=>`<div class="rline"><span>${t}</span></div>`).join('')}</section>`:''}
       <section class="rsec"><h3>Clienti e qualità</h3>
         <div class="rline"><span>Reputazione</span><span>${Math.round(r.rep0)} → ${Math.round(r.rep1)}</span></div>
         <div class="rline"><span>Clienti persi per mancanza di auto</span><span>${lostTot}</span></div>${lost?`<div style="padding-left:12px;display:grid;gap:4px">${lost}</div>`:''}

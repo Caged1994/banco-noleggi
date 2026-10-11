@@ -5,15 +5,15 @@ import { S, ui } from '../core/state.js';
 import { insClose, newInspection } from './inspection.js';
 import { overSendAway, probSendAway, processPickups } from './pickups.js';
 import { log, money, newWeek, rep, wages } from './ledger.js';
-import { isSun, wdd } from '../core/calendar.js';
+import { isSun, wdd, workEnd } from '../core/calendar.js';
 import { R, eur } from '../core/util.js';
 import { GOAL, INSUR_W, OFFICE_W } from '../data/catalog.js';
 import { payLoans } from './bank.js';
-import { cancelBooking } from './fleet.js';
 import { missedOpportunity, optionsFor } from './desk.js';
 import { buildReport } from './report.js';
 import { PLAYER_TIME, staffDaily, weeklyCands } from './staff.js';
 import { breakdownMul, crewMorning } from './crew.js';
+import { rehome, rollReturnIncident, rollTotalLoss } from './incidents.js';
 import { planEvents } from './seasons.js';
 import { genMarket } from './market.js';
 import { genReqs } from './clients.js';
@@ -32,15 +32,17 @@ export function nextDay(){
     payLoans();
   }
 
-  for(const c of S.fleet){
+  S.todayInc=[];
+  for(const c of [...S.fleet]){
     const b=c.bookings.find(x=>x.st==='out'&&x.start<=d&&d<x.end);
     if(b){
+      if(rollTotalLoss(c,b,nd))continue;
       if(Math.random()<((c.cond<45?(45-c.cond)/160:0)+(c.fragile?.035:0)+serviceRisk(c))*breakdownMul(c,d)){
         const refund=Math.max(0,b.end-nd)*(b.rate+b.svcRate);
         c.bookings=c.bookings.filter(x=>x!==b);
-        money(-150,'repair');money(-refund,'refund');rep(-6);loyal(b.cid,-30,'guasto durante il noleggio');c.cond=Math.max(5,c.cond-10);c.shopUntil=nd+2;c.shopStart=nd;c.shopWhat='Guasto';c.dirty=false;
+        money(-150,'repair');money(-refund,'refund');rep(-6);loyal(b.cid,-30,'guasto durante il noleggio');c.cond=Math.max(5,c.cond-10);c.shopUntil=workEnd(nd,2);c.shopStart=nd;c.shopWhat='Guasto';c.dirty=false;
         log(`Guasto! ${c.model} ${c.plate} in panne con ${b.cust}. Carro attrezzi e rimborso: −${eur(150+refund)}`,'bad');
-        c.bookings.filter(x=>x.start<c.shopUntil&&x.end>nd).forEach(x=>cancelBooking(c,x,'auto in officina'));
+        c.bookings.filter(x=>x.start<c.shopUntil&&x.end>nd).forEach(x=>rehome(c,x,'auto in officina per un guasto'));
         continue;
       }
       if(b.end===nd){
@@ -50,6 +52,7 @@ export function nextDay(){
           c.bookings=c.bookings.filter(x=>x!==b);
           c.cond=Math.max(0,Math.round(c.cond-(R(1,2.5)*b.days+R(0,2))*(c.tires==='invernali'&&!inWinter(d)?WINTER_TIRE_WEAR:1)));c.km+=Math.round(R(90,260)*b.days);c.dirty=true;
           newInspection(c,b);
+          rollReturnIncident(c,b,nd);
           const ev=Math.random();
           if(ev<.10){money(40,'extra');log(`${b.cust} riconsegna ${c.plate} senza aver fatto il pieno: +${eur(40)}`,'in')}
           else if(ev<.17){money(25,'extra');log(`Arrivata una multa per ${c.plate}: spese di gestione al cliente +${eur(25)}`,'in')}

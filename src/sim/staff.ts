@@ -31,8 +31,10 @@ export function aptLabel(v: number) {
 }
 const spanOn = (x, d) => x && x.start <= d && d < x.end;
 // motivo dell'assenza in un giorno ('' se è al lavoro)
+export const DAY_NAMES = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
 export function absence(e, d = S.day): string {
   if (spanOn(e.sick, d)) return 'malattia';
+  if (e.dayOff != null && (d - 1) % 7 === e.dayOff) return 'riposo';
   if (e.vac && e.vac.some((v) => spanOn(v, d))) return 'ferie';
   if (spanOn(e.course, d)) return 'corso';
   return '';
@@ -165,13 +167,13 @@ export function hire(id, role: string, contract: string, months = 2) {
     levels: { [role]: c.level }, xps: {}, aptKnown: {}, traitsKnown: false,
     wage: Math.round(c.wage * (contract === 'stagionale' ? SEASONAL_MUL : 1) / 10) * 10,
     contract, until: contract === 'stagionale' ? S.day + months * 30 : null,
-    hired: S.day, roleSince: S.day, sick: null, vac: [], course: null, raise: null, unhappy: false,
+    hired: S.day, roleSince: S.day, dayOff: RI(0, 6), sick: null, vac: [], course: null, raise: null, unhappy: false,
     vacLeft: contract === 'fisso' ? Math.round(VAC_DAYS * (366 - doy) / 365) : 0, time: 0,
   };
   e.time = staffTime(e);
   S.staff.push(e);
   S.cands = S.cands.filter((x) => x !== c);
-  log(`Assunt${e.name.endsWith('a') ? 'a' : 'o'} ${e.name}, ${ROLES[role].nome.toLowerCase()}, ${contract === 'fisso' ? 'contratto fisso' : `stagionale fino al ${dshort(e.until)}`} (${eur(e.wage)}/settimana). Settimana di prova fino al ${dshort(S.day + PROBATION)}.`, 'info');
+  log(`Assunt${e.name.endsWith('a') ? 'a' : 'o'} ${e.name}, ${ROLES[role].nome.toLowerCase()}, ${contract === 'fisso' ? 'contratto fisso' : `stagionale fino al ${dshort(e.until)}`} (${eur(e.wage)}/settimana), giorno di riposo: ${DAY_NAMES[e.dayOff]}. Settimana di prova fino al ${dshort(S.day + PROBATION)}.`, 'info');
   return e;
 }
 export function fireCost(e) {
@@ -211,7 +213,7 @@ export function offerFixed(id) {
 }
 
 // --- formazione e ferie
-export const canCourse = (e) => !inProbation(e) && !absence(e, S.day + 1) && lvOf(e) < LEVEL_MAX && !(e.course && e.course.end > S.day) && S.cash >= courseCost(lvOf(e));
+export const canCourse = (e) => !inProbation(e) && !['malattia', 'ferie', 'corso'].includes(absence(e, S.day + 1)) && lvOf(e) < LEVEL_MAX && !(e.course && e.course.end > S.day) && S.cash >= courseCost(lvOf(e));
 export function course(id) {
   const e = S.staff.find((x) => x.id === id);
   if (!e || !canCourse(e)) return;
@@ -221,7 +223,7 @@ export function course(id) {
   log(`${e.name} andrà a un corso di formazione dal ${dshort(e.course.start)} al ${dshort(e.course.end - 1)}: −${eur(cost)}.`, 'out');
 }
 export function vacFree(e, start: number, len: number) {
-  for (let d = start; d < start + len; d++) if (absence(e, d)) return false;
+  for (let d = start; d < start + len; d++) { const a = absence(e, d); if (a && a !== 'riposo') return false; }
   return true;
 }
 export function scheduleVac(id, start: number, len: number) {
@@ -314,7 +316,7 @@ export function migrateStaff() {
       raise: null, unhappy: false, vacLeft: VAC_DAYS, time: null,
     };
   });
-  for (const e of S.staff) if (e.time == null) e.time = staffTime(e);
+  for (const e of S.staff) { if (e.dayOff == null) e.dayOff = RI(0, 6); if (e.time == null) e.time = staffTime(e); }
   if (!S.cands || S.cands.some((c) => !c.bio)) genCands();
   if (!S.box) S.box = { own: false, ponte: false, diag: false, posto: false };
 }

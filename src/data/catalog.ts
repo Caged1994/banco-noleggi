@@ -15,7 +15,9 @@ export const SVC={
   gps:{nome:'GPS',short:'N',std:6},
   kasko:{nome:'Assicurazione totale',short:'K'},
 };
-export const KASKO={utilitaria:18,berlina:24,suv:30,furgone:28,lusso:45};
+export const KASKO={utilitaria:22,berlina:29,suv:36,furgone:34,lusso:55};
+// franchigia: quanto paga il cliente senza assicurazione totale in caso di furto, incendio o incidente
+export const FRANCHIGIA={utilitaria:1000,berlina:1500,suv:2000,furgone:2000,lusso:3500};
 export const SVC_KEYS=['upgrade','seat','driver','gps','kasko'];
 export const FIXED_SVC=['upgrade','seat','driver','gps'];
 export const TYPES={

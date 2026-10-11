@@ -10,6 +10,7 @@ import { newGame } from './sim/game.js';
 import { clean, repair, sell } from './sim/fleet.js';
 import { borrow, payoff } from './sim/bank.js';
 import { cancelVac, course, fire, grantRaise, hire, makeHappy, offerFixed, refuseRaise, scheduleVac, setRole, vacStarts } from './sim/staff.js';
+import { buySpare } from './sim/incidents.js';
 import { buyBox, buyBoxUp, crewWork, delegateProb, delegateReq, mechDo } from './sim/crew.js';
 import { assign, decline } from './sim/desk.js';
 import { propose } from './sim/services.js';
@@ -62,6 +63,7 @@ document.addEventListener('click',e=>{
   else if(a==='course')course(id);
   else if(a==='vac'){const v=ui.vac[id]||{},e=S.staff.find(x=>x.id===id);if(e){const st=+v.start||vacStarts()[0],ln=Math.min(+v.len||Math.min(5,e.vacLeft),e.vacLeft);scheduleVac(id,st,ln);delete ui.vac[id]}}
   else if(a==='vacdel')cancelVac(id,+b.dataset.k);
+  else if(a==='buyspare'){const [k,t]=b.dataset.k.split(':');buySpare(k,t)}
   else if(a==='buybox')buyBox();
   else if(a==='buyup')buyBoxUp(b.dataset.k);
   else if(a==='delegate')delegateReq(id);

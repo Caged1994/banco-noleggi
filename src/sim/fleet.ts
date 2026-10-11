@@ -4,7 +4,7 @@ import { S } from '../core/state.js';
 import { R, RI, eur, pick, plate, wpick } from '../core/util.js';
 import { CATS, CLEAN, DMG_KEYS, DMG_TYPES, REPAIR_SHARE, ZONES, ZONE_KEYS, dmgCost } from '../data/catalog.js';
 import { log, money, rep } from './ledger.js';
-import { wdd } from '../core/calendar.js';
+import { wdd, workEnd } from '../core/calendar.js';
 import { carPriceMul } from './seasons.js';
 /* ---------- calendario auto ---------- */
 // booking: {id,start,end,cust,rate,days,svc,svcRate} — fuori nei giorni start..end-1, rientra il giorno end
@@ -52,9 +52,11 @@ export function eligible(req,car){if(car.cat===req.cat)return true;if(req.cat===
 export const isUpgrade=(q,c)=>!!c&&c.cat!==q.cat;
 export const visiblyDamaged=c=>openDmgs(c).length>=3||openDmgs(c).some(d=>d.sev==='grave'&&d.type!=='mancanza');
 export function clean(id){const c=S.fleet.find(x=>x.id===id);if(!c||!c.dirty||!freeNow(c)||S.cash<CLEAN)return;c.dirty=false;money(-CLEAN,'wash');log(`Lavaggio ${c.plate}: −${eur(CLEAN)}`,'out')}
-export function canRepair(c){return freeNow(c)&&(c.cond<100||openDmgs(c).length>0)&&freeRange(c,S.day,S.day+repairDays(c))}
+// l'officina esterna lavora dal lunedì al venerdì: un'auto portata nel weekend aspetta il lunedì
+export const repairEnd=c=>workEnd(S.day,repairDays(c));
+export function canRepair(c){return freeNow(c)&&(c.cond<100||openDmgs(c).length>0)&&freeRange(c,S.day,repairEnd(c))}
 export function repair(id){const c=S.fleet.find(x=>x.id===id);if(!c||!canRepair(c))return;const cost=repairCost(c);if(S.cash<cost)return;
-  const nd=openDmgs(c).length;money(-cost,'repair');c.shopUntil=S.day+repairDays(c);c.shopStart=S.day;c.shopWhat='Officina';c.dirty=false;openDmgs(c).forEach(d=>d.repaired=c.shopUntil);
+  const nd=openDmgs(c).length;money(-cost,'repair');c.shopUntil=repairEnd(c);c.shopStart=S.day;c.shopWhat='Officina';c.dirty=false;openDmgs(c).forEach(d=>d.repaired=c.shopUntil);
   log(`${c.model} ${c.plate} in officina${nd?` (${nd} dann${nd>1?'i':'o'} da riparare)`:''}, pronta ${wdd(c.shopUntil)}: −${eur(cost)}`,'out')}
 export const canSell=c=>freeNow(c)&&!c.bookings.some(b=>b.end>S.day);
 export const sellPrice=c=>Math.round(value(c)*.9*carPriceMul(S.day));

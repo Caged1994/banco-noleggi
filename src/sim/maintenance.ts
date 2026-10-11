@@ -6,7 +6,7 @@
 // - Revisione ogni 2 anni (4 per le auto nuove): se scaduta l'auto non si noleggia.
 // Tagliando, revisione e officina si possono fare nella stessa giornata: l'auto si ferma un solo giorno.
 import { S } from '../core/state.js';
-import { dateOf, dshort, wdd } from '../core/calendar.js';
+import { dateOf, dshort, isWorkday, wdd, workEnd } from '../core/calendar.js';
 import { clamp, eur, RI } from '../core/util.js';
 import { CATS } from '../data/catalog.js';
 import { log, money } from './ledger.js';
@@ -55,11 +55,11 @@ export function maintIssues(c) {
 
 // --- lavori: si possono sommare nella stessa giornata
 // l'auto è libera oggi, oppure è già entrata in officina oggi per un altro lavoro
-export const canWork = (c) => (freeNow(c) && freeRange(c, S.day, S.day + 1)) || (c.shopStart === S.day && c.shopUntil > S.day);
+export const canWork = (c) => (freeNow(c) && freeRange(c, S.day, workEnd(S.day, 1))) || (c.shopStart === S.day && c.shopUntil > S.day);
 function enterShop(c, what) {
   if (c.shopStart === S.day && c.shopUntil > S.day) c.shopWhat = c.shopWhat.includes(what) ? c.shopWhat : `${c.shopWhat} + ${what}`;
   else { c.shopStart = S.day; c.shopWhat = what; }
-  c.shopUntil = Math.max(c.shopUntil, S.day + 1);
+  c.shopUntil = Math.max(c.shopUntil, workEnd(S.day, 1)); // nel weekend l'officina è chiusa: si lavora il lunedì
   c.dirty = false;
 }
 export const serviceCost = (c) => SERVICE_COST[c.cat];
@@ -81,7 +81,9 @@ export function doRevision(id) {
 }
 // Cambio gomme: in giornata, auto libera. Le estive non si montano se l'auto ha noleggi nel periodo invernale.
 export const tireTarget = (c) => (c.tires === 'invernali' ? 'estive' : 'invernali');
+// il gommista esterno è chiuso il sabato e la domenica
 export function canChangeTires(c) {
+  if (!isWorkday(S.day)) return false;
   if (!freeNow(c) && !(c.shopStart === S.day && c.shopUntil > S.day)) return false;
   if (tireTarget(c) === 'estive') return !c.bookings.some((b) => b.end > S.day && !tiresOk({ tires: 'estive' }, Math.max(b.start, S.day), b.end)) && !inWinter(S.day);
   return true;

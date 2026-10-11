@@ -6,7 +6,7 @@ import {
   BOX_COST, BOX_UP, BOX_UP_KEYS, LEVEL_MAX, MAX_STAFF, PROBATION, ROLES, ROLE_KEYS, SEASONAL_MUL, TRAITS, XP_NEED, courseCost,
 } from '../data/staffdata.js';
 import {
-  PLAYER_TIME, absence, aptLabel, aptOf, canCourse, canHireAs, fireCost, inProbation, lvOf, staffTime, vacFree, vacStarts, workingOf, xpOf,
+  DAY_NAMES, PLAYER_TIME, absence, aptLabel, aptOf, canCourse, canHireAs, fireCost, inProbation, lvOf, staffTime, vacFree, vacStarts, workingOf, xpOf,
 } from '../sim/staff.js';
 
 const fem = (n) => n.split(' ')[0].endsWith('a');
@@ -18,6 +18,7 @@ const roleOpts = (sel, withBlank = false) => (withBlank ? `<option value="">Sceg
 function statusChips(e) {
   const out = [];
   const ab = absence(e);
+  if (ab === 'riposo') out.push(`<span class="chip c-mut">Oggi a riposo</span>`);
   if (ab === 'malattia') out.push(`<span class="chip c-bad">In malattia fino al ${dshort(e.sick.end - 1)}</span>`);
   else if (ab === 'ferie') { const v = e.vac.find((x) => x.start <= S.day && S.day < x.end); out.push(`<span class="chip c-mut">In ferie fino al ${dshort(v.end - 1)}</span>`); }
   else if (ab === 'corso') out.push(`<span class="chip c-acc">Al corso fino al ${dshort(e.course.end - 1)}</span>`);
@@ -51,6 +52,7 @@ function empCard(e) {
       <label class="lbl" for="erole-${e.id}">Ruolo</label><select id="erole-${e.id}" data-erole="${e.id}">${roleOpts(e.role)}</select>
       <span class="lbl">Livello</span><span><b class="num">${lv}</b>/${LEVEL_MAX} ${need ? `${meter(xpOf(e), need, 'good')} <small>${Math.floor(xpOf(e))}/${need} esperienza</small>` : '<small>massimo</small>'}</span>
       <span class="lbl">Tempo oggi</span><span>${max ? `<b class="num">${e.time}</b>/${max} ${meter(e.time, max)}` : `<small>assente</small>`}</span>
+      <span class="lbl">Riposo</span><span>ogni ${DAY_NAMES[e.dayOff]}${absence(e) === 'riposo' ? ' · <b>oggi è a riposo</b>' : ''}</span>
       <span class="lbl">Contratto</span><span>${e.contract === 'fisso' ? 'Fisso' : `Stagionale fino al ${dshort(e.until - 1)}`} · <b class="num">${eur(e.wage)}</b>/sett.${e.raise ? ` → chiede <b class="num">${eur(e.raise.wage)}</b>` : ''}</span>
       <span class="lbl">Attitudine</span><span>${aptTxt}</span>
       <span class="lbl">Tratti</span><span>${traits}</span>

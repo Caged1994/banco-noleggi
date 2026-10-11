@@ -12,3 +12,7 @@ export const dlong=d=>{const t=dateOf(d);return `${['lunedì','martedì','mercol
 export const absDay=(y,doy)=>(y-1)*365+doy;
 export const isWE=d=>((d-1)%7)>=5;
 export const isSun=d=>((d-1)%7)===6;
+// Officine e gommisti esterni lavorano dal lunedì al venerdì.
+export const isWorkday=d=>!isWE(d);
+// giorno in cui un lavoro di n giorni lavorativi, iniziato (o in attesa) dal giorno start, è finito
+export function workEnd(start,n){let d=start,c=0;while(c<n){if(isWorkday(d))c++;d++}return d}

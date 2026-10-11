@@ -52,6 +52,8 @@ const staffOn = process.env.STAFF !== 'off';
 const ST = await mod('sim/staff.js');
 const CR = await mod('sim/crew.js');
 const SD = await mod('data/staffdata.js');
+const IN = await mod('sim/incidents.js');
+const incCount = {};
 const hint = (c, role) => SD.BIO_ROLE[role].some((t) => c.bio.includes(t));
 // Il bot assume secondo la flotta: lavaggista da 5 auto, addetto ai rientri da 6, venditore da 8, box e meccanico da 8 con la cassa.
 function botStaff(S, idle) {
@@ -106,6 +108,8 @@ for (let g = 1; g <= games; g++) {
     perMonth[m].days++;
 
     if (staffOn) botStaff(S, idle);
+    // gomme di scorta: una per categoria e tipo montato, da 6 auto in su
+    if (S.fleet.length >= 6) for (const c of S.fleet) if (!(S.spare[IN.spareKey(c)] > 0) && S.cash > 3000) IN.buySpare(c.cat, c.tires);
     staffMax = Math.max(staffMax, S.staff.length);
     for (const k of [...S.desk]) {
       if (k.kind === 'over') (swapOptions(k.b).length ? overSwap : overColleague)(k.id);
@@ -147,6 +151,7 @@ for (let g = 1; g <= games; g++) {
     occ += S.fleet.filter((c) => c.bookings.some((b) => b.st === 'out' && b.start <= S.day && S.day < b.end)).length / S.fleet.length; occDays++;
     nextDay();
     S = st.S;
+    for (const t of S.todayInc || []) { const k = t.split(/[: ]/)[0]; incCount[k] = (incCount[k] || 0) + 1; }
     minCash = Math.min(minCash, S.cash);
     if (day100 === null && netWorth() >= 100000) day100 = S.day;
     check(S);
@@ -169,4 +174,5 @@ for (let g = 1; g <= games; g++) {
   console.log(`  concorrenza: ${rivLost} clienti andati da AutoSprint, ${rivWon} arrivati da lei`);
   console.log(`  clienti: ${tiers.fedele} fedeli, ${tiers.abituale} abituali, ${tiers.nuovo} nuovi, ${tiers.perso} persi · ${back} ritorni nell'anno`);
 }
+console.log(`imprevisti in ${games} partite: ${Object.entries(incCount).map(([k, v]) => `${k} ${v}`).join(' · ')}`);
 console.log('Nessuna incoerenza trovata.');

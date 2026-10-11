@@ -3,20 +3,21 @@ import { RIVAL_NAME, RIVAL_SLOGAN, rivalPrice } from '../sim/rival.js';
 import { renderClients, tierChip } from './clients.js';
 import { S, ui } from '../core/state.js';
 import { clamp, eur, svcNames } from '../core/util.js';
-import { MNAME, dateOf, dshort, wdd } from '../core/calendar.js';
+import { MNAME, dateOf, dshort, isWE, wdd, workEnd } from '../core/calendar.js';
 import { netWorth } from '../sim/game.js';
-import { CATS, CAT_KEYS, CLEAN, CLEAN_INT, DMG_CAT, DMG_KEYS, DMG_TYPES, FIXED_SVC, GOAL, KASKO, PRE_DISC, REPAIR_SHARE, SVC, SVC_KEYS, TYPES, dmgCost, zn } from '../data/catalog.js';
+import { FRANCHIGIA, CATS, CAT_KEYS, CLEAN, CLEAN_INT, DMG_CAT, DMG_KEYS, DMG_TYPES, FIXED_SVC, GOAL, KASKO, PRE_DISC, REPAIR_SHARE, SVC, SVC_KEYS, TYPES, dmgCost, zn } from '../data/catalog.js';
 import { debt, fleetValue } from '../sim/bank.js';
 import { condColor, spark } from './common.js';
 import { carRate, obOptions, optionsFor, selectedCar } from '../sim/desk.js';
 import { includedSvc, svcBlock, svcPrice } from '../sim/services.js';
 import { miniStrip, renderDesk, renderIns, svcChips } from './banco.js';
-import { STOCK, canRepair, canSell, curBooking, dmgLabel, dmgRepairCost, freeNow, nextBooking, openDmgs, repairCost, repairDays, sellPrice, wearCost } from '../sim/fleet.js';
+import { STOCK, repairEnd, canRepair, canSell, curBooking, dmgLabel, dmgRepairCost, freeNow, nextBooking, openDmgs, repairCost, repairDays, sellPrice, wearCost } from '../sim/fleet.js';
 import { renderPlan } from './planning.js';
 import { renderBank } from './manage.js';
 import { renderCrew, renderTeam } from './team.js';
 import { boxValue, bestSeller, inHouse, mechRepairCost, mechSvcCost, mechTireCost } from '../sim/crew.js';
 import { PROPOSE_T } from '../sim/services.js';
+import { TIRE_PRICE, tireOne } from '../sim/incidents.js';
 import { renderEvList, renderSeason, renderTabs } from './tabs.js';
 import { renderReport } from './report.js';
 import { carPriceMul } from '../sim/seasons.js';
@@ -33,9 +34,9 @@ function maintRow(c){
   const hs=inHouse('svc',c),ht=inHouse('tires',c),hr=inHouse('rev',c);
   const btns=[
     k<=3000?(hs?`<button data-a="mservice" data-id="${c.id}" ${S.cash<hs.cost?'disabled':''} title="${hs.e.name}, ${hs.t} tempo: l'auto resta disponibile">Tagliando in sede ${eur(hs.cost)}</button>`
-      :`<button data-a="service" data-id="${c.id}" ${!work||S.cash<serviceCost(c)?'disabled':''} title="Ferma l'auto un giorno">Tagliando ${eur(serviceCost(c))}</button>`):'',
+      :`<button data-a="service" data-id="${c.id}" ${!work||S.cash<serviceCost(c)?'disabled':''} title="Officina esterna: pronta ${wdd(workEnd(S.day,1))}">Tagliando ${eur(serviceCost(c))}</button>`):'',
     r<=60?(hr?`<button data-a="mrev" data-id="${c.id}" ${S.cash<hr.cost?'disabled':''} title="${hr.e.name}, ${hr.t} tempo: l'auto resta disponibile">Revisione in sede ${eur(hr.cost)}</button>`
-      :`<button data-a="revision" data-id="${c.id}" ${!work||S.cash<REVISION_COST?'disabled':''} title="Ferma l'auto un giorno">Revisione ${eur(REVISION_COST)}</button>`):'',
+      :`<button data-a="revision" data-id="${c.id}" ${!work||S.cash<REVISION_COST?'disabled':''} title="Officina esterna: pronta ${wdd(workEnd(S.day,1))}">Revisione ${eur(REVISION_COST)}</button>`):'',
     ht?`<button data-a="mtires" data-id="${c.id}" ${S.cash<ht.cost?'disabled':''} title="${ht.e.name}, ${ht.t} tempo">Monta ${tireTarget(c)} in sede ${eur(ht.cost)}</button>`
       :canChangeTires(c)?`<button data-a="tires" data-id="${c.id}" ${S.cash<TIRE_COST[c.cat]?'disabled':''} title="In giornata">Monta ${tireTarget(c)} ${eur(TIRE_COST[c.cat])}</button>`:'',
   ].join('');
@@ -105,10 +106,11 @@ export function render(){
       <div class="acts"><button data-a="hist" data-id="${c.id}" aria-expanded="${!!ui.hist[c.id]}">${ui.hist[c.id]?'Chiudi storico':'Storico danni'}</button>${isFree?`
         ${c.dirty?`<button data-a="clean" data-id="${c.id}" ${S.cash<CLEAN?'disabled':''}>Lava ${eur(CLEAN)}</button>`:''}
         ${(()=>{const hp=inHouse('repair',c);return hp?`<button data-a="mrepair" data-id="${c.id}" ${S.cash<hp.cost?'disabled':''} title="${hp.e.name}, ${hp.t} tempo: l'auto resta disponibile${!S.box.ponte&&od.length?' · solo usura, per i danni serve il ponte':''}">Ripara in sede ${eur(hp.cost)}</button>`:''})()}
-        ${c.cond<100||od.length?`<button data-a="repair" data-id="${c.id}" ${(S.cash<rc||!canRepair(c))?'disabled':''} title="${canRepair(c)?`Usura ${eur(wearCost(c))} + danni ${eur(dmgRepairCost(c))} · pronta in ${repairDays(c)} g`:'Prenotata: non c\'è tempo per l\'officina'}">Officina ${eur(rc)}</button>`:''}
+        ${c.cond<100||od.length?`<button data-a="repair" data-id="${c.id}" ${(S.cash<rc||!canRepair(c))?'disabled':''} title="${canRepair(c)?`Usura ${eur(wearCost(c))} + danni ${eur(dmgRepairCost(c))} · pronta ${wdd(repairEnd(c))}${isWE(S.day)?' (officina chiusa nel weekend)':''}`:'Prenotata: non c\'è tempo per l\'officina'}">Officina ${eur(rc)}</button>`:''}
         ${canSell(c)?`<button class="danger ${armed?'armed':''}" data-a="sell" data-id="${c.id}">${armed?'Conferma '+eur(sv):'Vendi'}</button>`:''}`:''}
       </div>${maintRow(c)}${hist}</article>`}).join(''):`<div class="empty">Non hai auto. Comprane una dal mercato qui sotto.</div>`;
 
+  document.getElementById('incbox').innerHTML=S.todayInc&&S.todayInc.length?`<div class="banner lose incs" role="status"><b>Imprevisti di oggi</b><ul>${S.todayInc.map(t=>`<li>${t}</li>`).join('')}</ul></div>`:'';
   renderPlan();
   renderIns();
   renderDesk();
@@ -129,8 +131,8 @@ export function render(){
     +CAT_KEYS.map(k=>`<div class="row"><div class="l">${CATS[k].nome}<small>Media di mercato ${eur(CATS[k].base)}/g</small><small>${rivTxt(k)}</small></div>${stepper(k,S.prices[k],5,CATS[k].nome)}</div>`).join('')
     +`<span class="lbl" style="display:block;margin-top:10px">Servizi al giorno</span>`
     +FIXED_SVC.map(s=>`<div class="row"><div class="l">${SVC[s].nome}<small>Uguale per ogni auto · abituale ${eur(SVC[s].std)}/g</small></div>${stepper('svc:'+s,S.sprices[s],1,SVC[s].nome)}</div>`).join('')
-    +`<div class="row"><div class="l">Assicurazione totale<small>Tariffa fissa per tipo di veicolo</small></div></div>`
-    +CAT_KEYS.map(k=>`<div class="row" style="padding:3px 0 3px 12px"><div class="l"><small style="font-size:13px;color:var(--ink)">${CATS[k].nome}</small></div><span class="num" style="font-size:13px;font-weight:600">${eur(KASKO[k])}/g</span></div>`).join('')
+    +`<div class="row"><div class="l">Assicurazione totale e franchigia<small>Tariffa fissa per tipo di veicolo. Senza assicurazione totale il cliente paga i danni e, per furto, incendio o incidente, fino alla franchigia.</small></div></div>`
+    +CAT_KEYS.map(k=>`<div class="row" style="padding:3px 0 3px 12px"><div class="l"><small style="font-size:13px;color:var(--ink)">${CATS[k].nome}</small></div><span class="num" style="font-size:13px;font-weight:600">${eur(KASKO[k])}/g · franchigia ${eur(FRANCHIGIA[k])}</span></div>`).join('')
     +`<div class="panel-h" style="margin-top:12px"><span class="lbl">Listino danni</span><select id="dcat" aria-label="Categoria per il listino danni">${CAT_KEYS.map(k=>`<option value="${k}" ${ui.dcat===k?'selected':''}>${CATS[k].nome}</option>`).join('')}</select></div>
       <div class="dtab"><span></span><span class="lbl">Lieve</span><span class="lbl">Grave</span>${DMG_KEYS.map(t=>`<span>${DMG_TYPES[t].nome}${DMG_TYPES[t].ex?`<small>${DMG_TYPES[t].ex}</small>`:''}</span><span class="num">${eur(dmgCost(ui.dcat,t,'lieve','front'))}</span><span class="num">${eur(dmgCost(ui.dcat,t,'grave','front'))}</span>`).join('')}
         <span>${DMG_TYPES.interni.nome}<small>${DMG_TYPES.interni.ex}</small></span><span class="num">${eur(dmgCost(ui.dcat,'interni','lieve','int'))}</span><span class="num">${eur(dmgCost(ui.dcat,'interni','grave','int'))}</span>
@@ -150,7 +152,9 @@ export function render(){
     +chips(['usato'],'Usato')+chips(['nuovo','seminuovo','prestige'],'Autosaloni')
     +`<div class="dealer"><b>${D.nome}</b><span class="slogan">${D.slogan}</span><small>${D.desc}</small></div>`
     +offers
-    +`<span class="lbl" style="margin-top:6px">Attrezzatura</span>${['seat','gps'].map(k=>`<div class="row"><div class="l">${STOCK[k].nome}<small>Ne hai ${S[STOCK[k].key]}</small></div><button data-a="buystock" data-k="${k}" ${S.cash<STOCK[k].cost?'disabled':''}>${eur(STOCK[k].cost)}</button></div>`).join('')}`;
+    +`<span class="lbl" style="margin-top:6px">Attrezzatura</span>${['seat','gps'].map(k=>`<div class="row"><div class="l">${STOCK[k].nome}<small>Ne hai ${S[STOCK[k].key]}</small></div><button data-a="buystock" data-k="${k}" ${S.cash<STOCK[k].cost?'disabled':''}>${eur(STOCK[k].cost)}</button></div>`).join('')}`
+    +`<span class="lbl" style="margin-top:6px">Gomme di scorta</span><small style="color:var(--muted);font-size:12px">Con una gomma uguale in magazzino, una foratura si ripara subito e l'auto non si ferma.</small>`
+    +CAT_KEYS.filter(k=>S.fleet.some(c=>c.cat===k)).map(k=>`<div class="row"><div class="l">${CATS[k].nome}<small>Estive ${(S.spare||{})[k+':estive']||0} · invernali ${(S.spare||{})[k+':invernali']||0} in magazzino</small></div><span class="acts">${['estive','invernali'].map(t=>`<button data-a="buyspare" data-k="${k}:${t}" ${S.cash<TIRE_PRICE[k]?'disabled':''}>${tireOne(t)[0].toUpperCase()+tireOne(t).slice(1)} ${eur(TIRE_PRICE[k])}</button>`).join('')}</span></div>`).join('');
 
   // registro
   document.getElementById('log').innerHTML=S.log.map(e=>`<div><span class="d">${dshort(e.d)}</span><span class="${e.kind}">${e.txt}</span></div>`).join('');

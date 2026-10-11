@@ -5,7 +5,7 @@ import { eur } from '../core/util.js';
 import { log, rep } from './ledger.js';
 import { debt } from './bank.js';
 /* ---------- report settimanale ---------- */
-export const INC_LBL={rent:'Noleggi',svc:'Servizi',damage:'Danni addebitati',interior:'Pulizie e interni',extra:'Pieni, multe e ritardi',sell:'Vendita auto'};
+export const INC_LBL={rent:'Noleggi',svc:'Servizi',damage:'Danni addebitati',interior:'Pulizie e interni',extra:'Pieni, multe e ritardi',insur:'Rimborsi assicurazione',sell:'Vendita auto'};
 export const OUT_LBL={fixed:'Affitto e assicurazioni',staff:'Stipendi',train:'Formazione e liquidazioni',maint:'Manutenzione',loan:'Rate prestiti',repair:'Officina e soccorso',wash:'Lavaggi',refund:'Rimborsi',colleague:'Auto da colleghi',buy:'Acquisti'};
 export function buildReport(endDay){
   const w=S.wk,sum=o=>Object.values<any>(o).reduce((a,b)=>a+b,0);
@@ -26,7 +26,7 @@ export function buildReport(endDay){
   if(w.ignored>=3)tips.push(`${w.ignored} clienti avevano un'auto disponibile ma non sono stati serviti.`);
   if(!tips.length)tips.push('Settimana pulita, nessun problema evidente. Valuta di espandere la flotta.');
   const rep={no:w.no,from:w.start,to:endDay,inc:w.inc,out:w.out,net:sum(w.inc)-(w.inc.loanin||0)-sum(w.out),totIn:sum(w.inc)-(w.inc.loanin||0),totOut:sum(w.out),
-    cat:w.cat,svc:w.svc,cars,lost:w.lost,ignored:w.ignored,noshow:w.noshow,probSolved:w.probSolved,probLeft:w.probLeft,overOk:w.overOk,overBad:w.overBad,clBack:w.clBack,clLost:w.clLost,rivLost:w.rivLost,rivWon:w.rivWon,rep0:w.rep0,rep1:S.rep,
+    cat:w.cat,svc:w.svc,cars,lost:w.lost,ignored:w.ignored,noshow:w.noshow,probSolved:w.probSolved,probLeft:w.probLeft,overOk:w.overOk,overBad:w.overBad,clBack:w.clBack,clLost:w.clLost,rivLost:w.rivLost,rivWon:w.rivWon,incs:w.incs||[],rep0:w.rep0,rep1:S.rep,
     dmg:{found:w.dmgFound,missed:w.dmgMissed,falso:w.dmgFalse,inspected:w.inspected,value:w.dmgValue,lost:w.dmgLost,intv:w.intValue,intl:w.intLost},loanin:w.inc.loanin||0,debt:debt(),tips,cash:S.cash};
   S.reports.push(rep);if(S.reports.length>12)S.reports.shift();
   ui.report=S.reports.length-1;
