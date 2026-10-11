@@ -18,11 +18,12 @@ export function buildReport(endDay){
   const k=w.svc.kasko;if(k&&k.prop>=4&&k.acc/k.prop<.3)tips.push(`L'assicurazione totale è stata accettata ${k.acc} volte su ${k.prop}: i turisti e le famiglie la prendono più volentieri.`);
   if(w.dmgLost>=500)tips.push(`Hai perso ${eur(w.dmgLost)} di danni non trovati: un addetto ai rientri riduce la penalità dei danni vecchi e dello sporco.`);
   else if(w.dmgMissed)tips.push(`${w.dmgMissed} dann${w.dmgMissed>1?'i':'o'} sfuggit${w.dmgMissed>1?'i':'o'} all'ispezione: pulisci le zone sporche prima di controllarle.`);
+  if(w.clLost)tips.push(`${w.clLost} client${w.clLost>1?'i':'e'} non torner${w.clLost>1?'anno':'à'} più: addebiti contestati, overbooking e auto sporche sono le cause più comuni.`);
   if(w.overBad)tips.push(`${w.overBad} client${w.overBad>1?'i':'e'} in overbooking rimandat${w.overBad>1?'i':'o'} a casa: tieni un'auto di riserva o usa i colleghi.`);
   if(w.ignored>=3)tips.push(`${w.ignored} clienti avevano un'auto disponibile ma non sono stati serviti.`);
   if(!tips.length)tips.push('Settimana pulita, nessun problema evidente. Valuta di espandere la flotta.');
   const rep={no:w.no,from:w.start,to:endDay,inc:w.inc,out:w.out,net:sum(w.inc)-(w.inc.loanin||0)-sum(w.out),totIn:sum(w.inc)-(w.inc.loanin||0),totOut:sum(w.out),
-    cat:w.cat,svc:w.svc,cars,lost:w.lost,ignored:w.ignored,noshow:w.noshow,probSolved:w.probSolved,probLeft:w.probLeft,overOk:w.overOk,overBad:w.overBad,rep0:w.rep0,rep1:S.rep,
+    cat:w.cat,svc:w.svc,cars,lost:w.lost,ignored:w.ignored,noshow:w.noshow,probSolved:w.probSolved,probLeft:w.probLeft,overOk:w.overOk,overBad:w.overBad,clBack:w.clBack,clLost:w.clLost,rep0:w.rep0,rep1:S.rep,
     dmg:{found:w.dmgFound,missed:w.dmgMissed,falso:w.dmgFalse,inspected:w.inspected,value:w.dmgValue,lost:w.dmgLost,intv:w.intValue,intl:w.intLost},loanin:w.inc.loanin||0,debt:debt(),tips,cash:S.cash};
   S.reports.push(rep);if(S.reports.length>12)S.reports.shift();
   ui.report=S.reports.length-1;

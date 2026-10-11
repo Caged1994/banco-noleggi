@@ -1,3 +1,4 @@
+import { loyal, tierOfReq } from './regulars.js';
 import { KASKO, SVC, SVC_KEYS, TYPES } from '../data/catalog.js';
 import { S, ui } from '../core/state.js';
 import { STOCK, isUpgrade, stockFree } from './fleet.js';
@@ -22,7 +23,7 @@ export function includedSvc(q,c){
 export function acceptChance(q,c,s,price){
   const aff=TYPES[q.type].aff[s];
   const std=svcStd(q,c,s);
-  return Math.min(.95,aff*clamp(1.6-0.6*price/std,0.12,1.3)*(0.85+S.rep/333)*salesBoost());
+  return Math.min(.95,aff*clamp(1.6-0.6*price/std,0.12,1.3)*(0.85+S.rep/333)*salesBoost()*tierOfReq(q).accept);
 }
 export function propose(qid){
   const q=S.reqs.find(r=>r.id===qid);if(!q)return;
@@ -38,6 +39,6 @@ export function propose(qid){
   q.reply=yes.length&&!no.length?`Va bene, aggiungiamo ${svcNames(yes).toLowerCase()}.`
     :!yes.length?`No grazie, mi basta l'auto.`
     :`${svcNames(yes)} sì, ${svcNames(no).toLowerCase()} no.`;
-  if(offered.length>=3&&no.length>=2){rep(-0.5);q.reply+=' (Sembra un po\' infastidito da tutte queste proposte.)';log(`${q.name} si è sentito spinto a comprare troppo. Reputazione −0.5`,'rep')}
+  if(offered.length>=3&&no.length>=2){loyal(q.cid,-10,'troppe proposte');rep(-0.5);q.reply+=' (Sembra un po\' infastidito da tutte queste proposte.)';log(`${q.name} si è sentito spinto a comprare troppo. Reputazione −0.5`,'rep')}
   ui.checks[qid]=[];
 }

@@ -1,3 +1,4 @@
+import { loyal } from './regulars.js';
 import { S, ui } from '../core/state.js';
 import { insClose, newInspection } from './inspection.js';
 import { nightWash, overSendAway, probSendAway, processPickups } from './pickups.js';
@@ -34,7 +35,7 @@ export function nextDay(){
       if(Math.random()<(c.cond<45?(45-c.cond)/160:0)+(c.fragile?.035:0)){
         const refund=Math.max(0,b.end-nd)*(b.rate+b.svcRate);
         c.bookings=c.bookings.filter(x=>x!==b);
-        money(-150,'repair');money(-refund,'refund');rep(-6);c.cond=Math.max(5,c.cond-10);c.shopUntil=nd+2;c.dirty=false;
+        money(-150,'repair');money(-refund,'refund');rep(-6);loyal(b.cid,-30,'guasto durante il noleggio');c.cond=Math.max(5,c.cond-10);c.shopUntil=nd+2;c.dirty=false;
         log(`Guasto! ${c.model} ${c.plate} in panne con ${b.cust}. Carro attrezzi e rimborso: −${eur(150+refund)}`,'bad');
         c.bookings.filter(x=>x.start<c.shopUntil&&x.end>nd).forEach(x=>cancelBooking(c,x,'auto in officina'));
         continue;
@@ -49,7 +50,7 @@ export function nextDay(){
           const ev=Math.random();
           if(ev<.10){money(40,'extra');log(`${b.cust} riconsegna ${c.plate} senza aver fatto il pieno: +${eur(40)}`,'in')}
           else if(ev<.17){money(25,'extra');log(`Arrivata una multa per ${c.plate}: spese di gestione al cliente +${eur(25)}`,'in')}
-          else if(ev<.24){rep(2);log(`${b.cust} riconsegna ${c.plate} e lascia una recensione a 5 stelle.`,'rep')}
+          else if(ev<.24){rep(2);loyal(b.cid,10,'recensione a 5 stelle');log(`${b.cust} riconsegna ${c.plate} e lascia una recensione a 5 stelle.`,'rep')}
           else log(`${b.cust} riconsegna ${c.model} ${c.plate}: da ispezionare.`);
         }
       }
@@ -63,6 +64,7 @@ export function nextDay(){
     const ignored=S.reqs.filter(missedOpportunity);
     const pen=ignored.reduce((a,q)=>a+(q.type==='business'?1.5:1),0);
     S.reqs.forEach(q=>{if(optionsFor(q).length)S.wk.ignored++;else S.wk.lost[q.cat]=(S.wk.lost[q.cat]||0)+1});
+    ignored.forEach(q=>loyal(q.cid,-25,'prenotazione ignorata'));
     const walk=S.reqs.length-ignored.length;
     if(walk)log(`${walk} client${walk>1?'i':'e'} senza auto se ne sono andati altrove.`);
     if(ignored.length){rep(-pen);log(`${ignored.length} prenotazion${ignored.length>1?'i':'e'} ignorat${ignored.length>1?'e':'a'} pur avendo auto libere. Reputazione −${pen.toFixed(1)}`,'rep')}

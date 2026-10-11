@@ -1,3 +1,4 @@
+import { clientById, loyal, tierOf } from './regulars.js';
 import { S, ui } from '../core/state.js';
 import { busyOn, eligible, freeRange, visiblyDamaged } from './fleet.js';
 import { CATS, KASKO, NOSHOW, PROBLEM, PROBS, QUICKWASH } from '../data/catalog.js';
@@ -15,15 +16,16 @@ export function swapOptions(b,minTier?){
 }
 export function handOver(c,b){
   b.st='out';
-  if(visiblyDamaged(c)){rep(-.5);log(`${b.cust} nota i danni su ${c.plate}: reputazione −0,5`,'rep')}
+  if(visiblyDamaged(c)){rep(-.5);loyal(b.cid,-5,'danni visibili al ritiro');log(`${b.cust} nota i danni su ${c.plate}: reputazione −0,5`,'rep')}
   if(c.dirty){c.dirty=false;money(-QUICKWASH,'wash');log(`Lavaggio rapido di ${c.plate} prima della consegna a ${b.cust}: −${eur(QUICKWASH)}`,'out')}
-  if(c.cond<50)rep(-2);
+  if(c.cond<50){rep(-2);loyal(b.cid,-10,'auto malandata')}
 }
 export function processPickups(nd){
   const list=[];S.fleet.forEach(c=>c.bookings.forEach(b=>{if(b.st==='reserved'&&b.start===nd)list.push([c,b])}));
   list.sort((x,y)=>x[1].id-y[1].id);
   for(const [c,b] of list){
-    if(Math.random()<NOSHOW){
+    const fedele=tierOf(clientById(b.cid))==='fedele';
+    if(!fedele&&Math.random()<NOSHOW){
       c.bookings=c.bookings.filter(x=>x!==b);S.wk.noshow++;
       log(`${b.cust} non si presenta a ritirare ${c.plate}: prepagato di ${eur(prepaid(b))} trattenuto, l'auto torna libera.`);continue;
     }
@@ -33,7 +35,7 @@ export function processPickups(nd){
       S.desk.push({id:S.nid++,kind:'over',b,plate:c.plate});
       log(`Overbooking: ${b.cust} è al banco ma ${c.plate} è già occupata.`,'bad');continue;
     }
-    if(Math.random()<PROBLEM){
+    if(Math.random()<PROBLEM*(fedele?.4:1)){
       const types=['patente','ritardo'];if(!b.svc.includes('kasko'))types.push('deposito');
       b.st='waiting';
       S.desk.push({id:S.nid++,kind:'prob',ptype:pick(types),b});
@@ -49,7 +51,7 @@ export function overSwap(id){
   const k=deskCase(id);if(!k)return;
   const opts=swapOptions(k.b),c=opts.find(x=>x.id===ui.dsel[id])||opts[0];if(!c)return;
   c.bookings.push(k.b);handOver(c,k.b);S.wk.overOk++;
-  const up=c.cat!==k.b.cat;if(up)rep(1);
+  const up=c.cat!==k.b.cat;if(up){rep(1);loyal(k.b.cid,10,'upgrade gratuito in overbooking')}
   log(`${k.b.cust} riceve ${c.model} ${c.plate}${up?' in upgrade gratuito (reputazione +1)':''}.`,up?'rep':'info');
   closeCase(k);
 }
@@ -62,7 +64,7 @@ export function overColleague(id){
 }
 export function overSendAway(id,auto=false){
   const k=deskCase(id);if(!k)return;
-  money(-prepaid(k.b),'refund');rep(-6);S.wk.overBad++;
+  money(-prepaid(k.b),'refund');rep(-6);S.wk.overBad++;loyal(k.b.cid,-60,'rimandato a casa per overbooking');
   log(`${k.b.cust} rimandato a casa per overbooking${auto?' (nessuna soluzione trovata in giornata)':''}: rimborso −${eur(prepaid(k.b))}, reputazione −6.`,'bad');
   closeCase(k);
 }
@@ -82,6 +84,7 @@ export function probSolve(id){
   const price=probPrice(k);
   if(Math.random()>=Math.min(.95,PROBS[k.ptype].acc*salesBoost())){
     c.bookings=c.bookings.filter(x=>x!==b);S.wk.probLeft++;
+    loyal(b.cid,-15,'soluzione rifiutata al ritiro');
     log(`${b.cust} rifiuta: ${PROBS[k.ptype].sol.toLowerCase()} per ${eur(price)} è troppo. Se ne va, prepagato di ${eur(prepaid(b))} trattenuto.`);
     closeCase(k);return;
   }
@@ -95,7 +98,7 @@ export function probSolve(id){
 }
 export function probSendAway(id,auto=false){
   const k=deskCase(id);if(!k)return;const c=carFor(k.b);
-  if(c)c.bookings=c.bookings.filter(x=>x!==k.b);S.wk.probLeft++;
+  if(c)c.bookings=c.bookings.filter(x=>x!==k.b);S.wk.probLeft++;loyal(k.b.cid,auto?-15:-25,auto?'problema al ritiro non risolto':'mandato via al ritiro');
   log(`${k.b.cust} ${auto?'se ne va senza aver risolto':'mandato via'}: prepagato di ${eur(prepaid(k.b))} trattenuto, l'auto torna libera.`);
   closeCase(k);
 }

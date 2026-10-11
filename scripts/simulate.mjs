@@ -35,6 +35,7 @@ const { buyUsed } = await mod('sim/market.js');
 const { debt, fleetValue } = await mod('sim/bank.js');
 const { netWorth } = await mod('sim/game.js');
 const { dateOf, MSHORT } = await mod('core/calendar.js');
+const { tierOf } = await mod('sim/regulars.js');
 
 const days = Number(process.argv[2] ?? 365);
 const games = Number(process.argv[3] ?? 3);
@@ -65,6 +66,7 @@ for (let g = 1; g <= games; g++) {
       else if (k.ptype !== 'ritardo' || probOptions(k).length) probSolve(k.id);
       else probSendAway(k.id);
     }
+    for (const c of S.fleet) if (c.dirty && freeNow(c)) clean(c.id);
     for (const q of [...S.reqs]) {
       if (!optionsFor(q).length) continue;
       st.ui.checks[q.id] = q.type === 'famiglia' ? ['seat', 'kasko'] : ['kasko', 'gps'];
@@ -90,5 +92,9 @@ for (let g = 1; g <= games; g++) {
   const demand = Object.entries(perMonth).map(([m, v]) => `${MSHORT[m]} ${(v.req / v.days).toFixed(1)}`).join(' · ');
   console.log(`Partita ${g}: giorno ${S.day}${S.lost ? ' (FALLITA)' : ''} · cassa €${Math.round(S.cash)} · patrimonio €${netWorth()} · flotta ${S.fleet.length} (comprate ${bought}) · reputazione ${Math.round(S.rep)} · debito €${debt()}`);
   console.log(`  clienti al giorno: ${demand}`);
+  const tiers = { fedele: 0, abituale: 0, nuovo: 0, perso: 0 };
+  for (const c of S.clients) tiers[tierOf(c)]++;
+  const back = S.reports.reduce((a, r) => a + (r.clBack || 0), 0);
+  console.log(`  clienti: ${tiers.fedele} fedeli, ${tiers.abituale} abituali, ${tiers.nuovo} nuovi, ${tiers.perso} persi · ${back} ritorni nell'anno`);
 }
 console.log('Nessuna incoerenza trovata.');

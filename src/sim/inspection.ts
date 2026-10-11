@@ -1,3 +1,4 @@
+import { loyal } from './regulars.js';
 import { CLEAN_INT, DMG_CAT, ZONE_KEYS, ZSU, dmgCost } from '../data/catalog.js';
 import { R, clamp, eur } from '../core/util.js';
 import { dmgLabel, rollDamage, zoneOld } from './fleet.js';
@@ -17,7 +18,7 @@ export function newInspection(c,b){
   if(ri<.05*fam)int={cond:'rovinati',sev:Math.random()<.25?'grave':'lieve',st:'none'};
   else if(ri<(.05+.13+b.days*.01)*fam)int={cond:'sporchi',st:'none'};
   int.cost=int.cond==='sporchi'?Math.round(CLEAN_INT*DMG_CAT[c.cat]/5)*5:int.cond==='rovinati'?dmgCost(c.cat,'interni',int.sev,'int'):0;
-  S.ins.push({id:S.nid++,car:c.id,plate:c.plate,model:c.model,cat:c.cat,cust:b.cust,kasko:b.svc.includes('kasko'),dmg,zones,int,acted:false});
+  S.ins.push({id:S.nid++,car:c.id,plate:c.plate,model:c.model,cat:c.cat,cust:b.cust,cid:b.cid,kasko:b.svc.includes('kasko'),dmg,zones,int,acted:false});
 }
 export const insCar=it=>S.fleet.find(c=>c.id===it.car);
 // probabilità di trovare un danno nuovo nella zona: cala con lo sporco e con i danni vecchi non riparati
@@ -54,7 +55,7 @@ export function insGamble(id,k){
   const it=S.ins.find(x=>x.id===id);if(!it||it.zones[k].st!=='unsure')return;
   it.acted=true;
   if(it.dmg&&it.dmg.zone===k){it.zones[k].st='found';insClose(id)}
-  else{S.wk.dmgFalse++;rep(-2);log(`${it.cust} contesta l'addebito: ${ZSU[k]} di ${it.plate} non c'è nessun danno nuovo. Reputazione −2`,'rep');
+  else{S.wk.dmgFalse++;rep(-2);loyal(it.cid,-50,'addebito contestato');log(`${it.cust} contesta l'addebito: ${ZSU[k]} di ${it.plate} non c'è nessun danno nuovo. Reputazione −2`,'rep');
     insMsg(`${it.plate}: addebito contestato. ${ZSU[k][0].toUpperCase()+ZSU[k].slice(1)} non c'era nessun danno nuovo${it.dmg?`; il danno vero era ${ZSU[it.dmg.zone]} e ora non è più addebitabile`:''}. Reputazione −2.`,'lose');
     insClose(id,false,true,true)}
 }
@@ -67,7 +68,7 @@ export function insClose(id,skipped=false,contested=false,quiet=false){
   const I=it.int;
   if(I&&I.cond!=='ok'){
     if(I.st==='checked'){
-      money(I.cost,'interior');S.wk.intValue=(S.wk.intValue||0)+I.cost;rep(-.5);
+      money(I.cost,'interior');S.wk.intValue=(S.wk.intValue||0)+I.cost;rep(-.5);loyal(it.cid,-5,'addebito interni');
       log(`${intLabel(I)} su ${it.plate}: addebitati ${eur(I.cost)} a ${it.cust} (reputazione −0,5)`,'in');
       msgs.push(`${intLabel(I).toLowerCase()} addebitata, +${eur(I.cost)}`);
       if(I.cond==='rovinati'&&c)c.dmgs.push({id:S.nid++,zone:'int',type:'interni',sev:I.sev,cost:I.cost,day:S.day,cust:it.cust,status:'charged'});
@@ -84,7 +85,7 @@ export function insClose(id,skipped=false,contested=false,quiet=false){
     if(found){
       S.wk.dmgFound++;
       if(it.kasko){rec.status='covered';log(`Trovato ${where}: coperto dall'assicurazione totale di ${it.cust}. Listino ${eur(d.cost)}, nessun addebito.`);msgs.push(`${dmgLabel(d).toLowerCase()} registrato, coperto dall'assicurazione`)}
-      else{rec.status='charged';money(d.cost,'damage');S.wk.dmgValue+=d.cost;const r=d.sev==='grave'?1:.5;rep(-r);
+      else{rec.status='charged';money(d.cost,'damage');S.wk.dmgValue+=d.cost;const r=d.sev==='grave'?1:.5;rep(-r);loyal(it.cid,d.sev==='grave'?-15:-10,'danno addebitato');
         log(`Trovato ${where}: addebitati ${eur(d.cost)} da listino a ${it.cust} (reputazione −${r})`,'in');
         msgs.push(`${dmgLabel(d).toLowerCase()} ${ZSU[d.zone]} addebitato, +${eur(d.cost)} (reputazione −${String(r).replace('.',',')})`)}
     }else{

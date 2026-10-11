@@ -1,3 +1,4 @@
+import { loyal } from './regulars.js';
 import { S } from '../core/state.js';
 import { R, RI, eur, pick, plate, wpick } from '../core/util.js';
 import { CATS, CLEAN, DMG_KEYS, DMG_TYPES, REPAIR_SHARE, ZONES, ZONE_KEYS, dmgCost } from '../data/catalog.js';
@@ -59,7 +60,7 @@ export const sellPrice=c=>Math.round(value(c)*.9*carPriceMul(S.day));
 export function sell(id){const c=S.fleet.find(x=>x.id===id);if(!c||!canSell(c))return;const v=sellPrice(c);money(v,'sell');S.fleet=S.fleet.filter(x=>x!==c);log(`Venduta ${c.model} ${c.plate}: +${eur(v)}`,'in')}
 
 export function cancelBooking(c,b,why){
-  const refund=(b.rate+b.svcRate)*b.days;money(-refund,'refund');rep(-4);
+  const refund=(b.rate+b.svcRate)*b.days;money(-refund,'refund');rep(-4);loyal(b.cid,-25,'prenotazione annullata');
   c.bookings=c.bookings.filter(x=>x!==b);
   log(`Prenotazione di ${b.cust} su ${c.plate} annullata (${why}). Rimborso −${eur(refund)}`,'bad');
 }

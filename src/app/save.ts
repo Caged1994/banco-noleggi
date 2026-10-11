@@ -14,6 +14,7 @@ export function start(data){
   if(S.sprices.gps==null)S.sprices.gps=SVC.gps.std;
   if(S.gpsN==null)S.gpsN=2;
   if(!S.events)S.events=[];
+  if(!S.clients)S.clients=[];
   ui.tab=ui.tab||loadTab();
   if(S.market.some(m=>!m.dealer))genMarket();
   ui.dealer=ui.dealer||'gino';

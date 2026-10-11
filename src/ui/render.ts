@@ -1,3 +1,4 @@
+import { renderClients, tierChip } from './clients.js';
 import { S, ui } from '../core/state.js';
 import { clamp, eur, svcNames } from '../core/util.js';
 import { MNAME, dateOf, dshort, wdd } from '../core/calendar.js';
@@ -36,7 +37,7 @@ export function render(){
     const inc=c?includedSvc(q,c):[],svcRate=inc.reduce((a,s)=>a+svcPrice(q,c,s),0),tot=(rate+svcRate)*q.days;
     const canPropose=c&&SVC_KEYS.some(s=>!q.ask.includes(s)&&!(s in q.tried)&&!svcBlock(q,c,s));
     return `<article class="req" data-req="${q.id}">
-      <div class="req-top"><span class="req-name">${q.name}</span><span>${pre?`<span class="chip c-mut">Prenotazione −20%</span> `:''}<span class="chip c-acc">${T.label}</span></span></div>
+      <div class="req-top"><span class="req-name">${q.name}</span><span>${pre?`<span class="chip c-mut">Prenotazione −20%</span> `:''}${tierChip(q)}<span class="chip c-acc">${T.label}</span></span></div>
       <div class="req-meta">Cerca <b>${CATS[q.cat].nome}</b> · ${pre?`dal <b>${wdd(q.start)}</b>, `:'da <b>oggi</b>, '}${q.days} ${q.days>1?'giorni':'giorno'} (rientro ${wdd(q.start+q.days)}) · budget fino a <b class="num">${eur(q.budget)}/g</b></div>
       <div class="req-note">«${q.note}»</div>
       <div>${ok?`<span class="chip c-ok">${pre?'Prezzo prenotazione':'Listino'} ${eur(price)}/g · accetta</span>`:`<span class="chip c-warn">${pre?'Prezzo prenotazione':'Listino'} ${eur(price)}/g troppo caro · sconto a ${eur(q.budget)}</span>`}</div>
@@ -88,6 +89,7 @@ export function render(){
   renderTabs();
   renderSeason();
   renderEvList();
+  renderClients();
   document.getElementById('backempty').innerHTML=!S.ins.length&&!S.desk.length?'<div class="panel-h"><h2>Rientri e ritiri</h2></div><div class="empty">Nessun rientro da ispezionare e nessun ritiro da risolvere.</div>':'';
   renderBank();
   renderReport();

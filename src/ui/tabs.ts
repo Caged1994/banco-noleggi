@@ -3,7 +3,7 @@ import { freeNow, visiblyDamaged } from '../sim/fleet.js';
 import { activeEvents, evCatsTxt, evMul, evTypesTxt, seasonOf } from '../sim/seasons.js';
 import { clamp, eur } from '../core/util.js';
 import { dlong, dshort } from '../core/calendar.js';
-export const TABS=[['banco','Banco'],['flotta','Flotta'],['planning','Planning'],['acquisti','Acquisti'],['gestione','Gestione'],['registro','Registro']];
+export const TABS=[['banco','Banco'],['flotta','Flotta'],['clienti','Clienti'],['planning','Planning'],['acquisti','Acquisti'],['gestione','Gestione'],['registro','Registro']];
 export function loadTab(){try{const t=localStorage.getItem('banco-noleggi-tab');return TABS.some(x=>x[0]===t)?t:'banco'}catch(e){return 'banco'}}
 export function saveTab(t){try{localStorage.setItem('banco-noleggi-tab',t)}catch(e){}}
 export function renderTabs(){
