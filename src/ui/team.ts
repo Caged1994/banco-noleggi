@@ -3,10 +3,10 @@ import { S, ui } from '../core/state.js';
 import { dshort } from '../core/calendar.js';
 import { clamp, eur } from '../core/util.js';
 import {
-  BOX_COST, BOX_UP, BOX_UP_KEYS, LEVEL_MAX, MAX_STAFF, PROBATION, ROLES, ROLE_KEYS, SEASONAL_MUL, TRAITS, XP_NEED, courseCost,
+  BOX_COST, BOX_UP, BOX_UP_KEYS, LEVEL_MAX, PROBATION, ROLES, ROLE_KEYS, SEASONAL_MUL, TRAITS, XP_NEED, courseCost,
 } from '../data/staffdata.js';
 import {
-  DAY_NAMES, PLAYER_TIME, absence, aptLabel, aptOf, canCourse, canHireAs, fireCost, inProbation, lvOf, staffTime, vacFree, vacStarts, workingOf, xpOf,
+  DAY_NAMES, PLAYER_TIME, absence, aptLabel, aptOf, canCourse, canHireAs, fireCost, inProbation, lvOf, maxStaff, staffTime, vacFree, vacStarts, workingOf, xpOf,
 } from '../sim/staff.js';
 
 const fem = (n) => n.split(' ')[0].endsWith('a');
@@ -72,7 +72,7 @@ function candCard(c) {
   const cons = [['fisso', 'Fisso'], ['s1', 'Stagionale 1 mese'], ['s2', 'Stagionale 2 mesi'], ['s3', 'Stagionale 3 mesi']].filter(([k]) => canHireAs(c, k === 'fisso' ? 'fisso' : 'stagionale'));
   const con = cons.some(([k]) => k === h.con) ? h.con : cons[0][0];
   const role = c.trained ? c.role : h.role || '';
-  const full = S.staff.length >= MAX_STAFF, noRole = !role, noBox = role === 'meccanico' && !S.box.own;
+  const full = S.staff.length >= maxStaff(), noRole = !role, noBox = role === 'meccanico' && !S.box.own;
   const wants = { fisso: 'Solo fisso', stagionale: 'Solo stagionale', entrambi: 'Fisso o stagionale' }[c.wants];
   const wage = con === 'fisso' ? c.wage : Math.round(c.wage * SEASONAL_MUL / 10) * 10;
   return `<article class="emp cand">
@@ -82,7 +82,7 @@ function candCard(c) {
     <div class="req-act">
       ${c.trained ? '' : `<select data-hk="role" data-id="${c.id}" aria-label="Ruolo per ${first(c.name)}">${roleOpts(role, true)}</select>`}
       <select data-hk="con" data-id="${c.id}" aria-label="Contratto per ${first(c.name)}">${cons.map(([k, l]) => `<option value="${k}" ${k === con ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <button class="pri" data-a="hire" data-id="${c.id}" ${full || noRole || noBox ? 'disabled' : ''} title="${full ? `Hai già ${MAX_STAFF} dipendenti` : noRole ? 'Scegli prima il ruolo' : noBox ? 'Il meccanico lavora solo nel box officina' : ''}">Assumi · ${eur(wage)}/sett.</button>
+      <button class="pri" data-a="hire" data-id="${c.id}" ${full || noRole || noBox ? 'disabled' : ''} title="${full ? `Hai già ${maxStaff()} dipendenti` : noRole ? 'Scegli prima il ruolo' : noBox ? 'Il meccanico lavora solo nel box officina' : ''}">Assumi · ${eur(wage)}/sett.</button>
     </div>
   </article>`;
 }
@@ -97,7 +97,7 @@ function boxCard() {
 
 export function renderTeam() {
   const wages = S.staff.reduce((a, x) => a + x.wage, 0);
-  document.getElementById('teamcount').textContent = `${S.staff.length}/${MAX_STAFF} · stipendi ${eur(wages)}/settimana`;
+  document.getElementById('teamcount').textContent = `${S.staff.length}/${maxStaff()} · stipendi ${eur(wages)}/settimana`;
   document.getElementById('team').innerHTML = S.staff.length ? S.staff.map(empCard).join('')
     : `<div class="empty">Lavori da solo: ${PLAYER_TIME} di tempo al giorno per ispezioni e proposte. Assumi qualcuno per farti aiutare.</div>`;
   document.getElementById('cands').innerHTML = S.cands.length ? S.cands.map(candCard).join('')

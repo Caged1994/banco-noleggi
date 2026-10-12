@@ -6,7 +6,7 @@ import { log, rep } from './ledger.js';
 import { debt } from './bank.js';
 /* ---------- report settimanale ---------- */
 export const INC_LBL={rent:'Noleggi',svc:'Servizi',damage:'Danni addebitati',interior:'Pulizie e interni',extra:'Pieni, multe e ritardi',insur:'Rimborsi assicurazione',sell:'Vendita auto'};
-export const OUT_LBL={fixed:'Affitto e assicurazioni',staff:'Stipendi',train:'Formazione e liquidazioni',maint:'Manutenzione',loan:'Rate prestiti',repair:'Officina e soccorso',wash:'Lavaggi',refund:'Rimborsi',colleague:'Auto da colleghi',buy:'Acquisti'};
+export const OUT_LBL={fixed:'Affitto e assicurazioni',staff:'Stipendi',train:'Formazione e liquidazioni',tax:'Tasse',maint:'Manutenzione',loan:'Rate prestiti',repair:'Officina e soccorso',wash:'Lavaggi',refund:'Rimborsi',colleague:'Auto da colleghi',buy:'Acquisti'};
 export function buildReport(endDay){
   const w=S.wk,sum=o=>Object.values<any>(o).reduce((a,b)=>a+b,0);
   const cars=S.fleet.map(c=>({plate:c.plate,model:c.model,cat:c.cat,inc:w.car[c.id]||0})).sort((a,b)=>b.inc-a.inc);

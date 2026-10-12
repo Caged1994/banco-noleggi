@@ -12,7 +12,7 @@ import { eur } from '../core/util.js';
 import { debt, fleetValue } from './bank.js';
 import { boxValue } from './crew.js';
 export function newGame(){
-  setState({day:1,cash:8000,rep:50,seats:2,gpsN:2,fleet:[],reqs:[],market:[],prices:{},sprices:{},log:[],hist:[8000],nid:1,won:false,lost:false,
+  setState({day:1,cash:8000,rep:50,seats:2,gpsN:2,fleet:[],reqs:[],market:[],prices:{},sprices:{},log:[],hist:[8000],nid:1,won:false,ms:0,lost:false,
      today:{in:0,out:0},stats:{rented:0,lost:0,svc:0},ins:[],reports:[],time:10,staff:[],cands:[],desk:[],loans:[],events:[],clients:[],box:{own:false,ponte:false,diag:false,posto:false},spare:{},todayInc:[]});
   S.rival=newRival();
   S.wk=newWeek();
@@ -22,6 +22,7 @@ export function newGame(){
   S.fleet.forEach(c=>initMaint(c,'used'));
   preDamage(S.fleet[1],1);preDamage(S.fleet[3],2);
   setUi({tab:ui.tab||'banco',armed:null,preview:null,sel:{},checks:{},zone:{},report:null,dsel:{},hist:{},dcat:'berlina',hire:{},vac:{}});
+  S.nwYear=netWorth();
   genMarket();genCands();genReqs();
   planEvents();
   log('1 gennaio, primo giorno di lavoro. È bassa stagione: pochi clienti, il momento giusto per imparare. Hai rilevato una piccola agenzia con 4 auto, 2 seggiolini e 2 GPS. Obiettivo: un patrimonio netto di '+eur(GOAL)+' (cassa + valore della flotta e del box officina − debiti).','hdr');

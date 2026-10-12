@@ -4,10 +4,11 @@ import { loyal } from './regulars.js';
 import { S, ui } from '../core/state.js';
 import { insClose, newInspection } from './inspection.js';
 import { overSendAway, probSendAway, processPickups } from './pickups.js';
-import { insurWeek, log, money, newWeek, rep, wages } from './ledger.js';
+import { insurWeek, log, money, newWeek, rentWeek, rep, wages } from './ledger.js';
+import { checkMilestones, yearEnd } from './progress.js';
+import { dateOf } from '../core/calendar.js';
 import { isSun, wdd, workEnd } from '../core/calendar.js';
 import { R, eur } from '../core/util.js';
-import { GOAL, OFFICE_W } from '../data/catalog.js';
 import { payLoans } from './bank.js';
 import { missedOpportunity, optionsFor } from './desk.js';
 import { buildReport } from './report.js';
@@ -17,7 +18,6 @@ import { rehome, rollReturnIncident, rollTotalLoss } from './incidents.js';
 import { planEvents } from './seasons.js';
 import { genMarket } from './market.js';
 import { genReqs } from './clients.js';
-import { netWorth } from './game.js';
 export function nextDay(){
   if(S.lost)return;
   const d=S.day,nd=d+1;
@@ -26,11 +26,12 @@ export function nextDay(){
   log(`Chiusura ${wdd(d)}: entrate ${eur(S.today.in)}, uscite ${eur(S.today.out)}`,'hdr');
   S.today={in:0,out:0};
   if(isSun(d)){
-    const f=OFFICE_W+insurWeek(),w=wages();
+    const r=rentWeek(),a=insurWeek(),f=r+a,w=wages();
     money(-f,'fixed');if(w)money(-w,'staff');
-    log(`Fine settimana: affitto e assicurazioni −${eur(f)}${w?`, stipendi −${eur(w)}`:''}`,'out');
+    log(`Fine settimana: affitto −${eur(r)} e assicurazioni −${eur(a)}${w?`, stipendi −${eur(w)}`:''}`,'out');
     payLoans();
   }
+  if(dateOf(d).doy===365)yearEnd(d);
 
   S.todayInc=[];
   for(const c of [...S.fleet]){
@@ -89,6 +90,6 @@ export function nextDay(){
   S.hist.push(Math.round(S.cash));if(S.hist.length>60)S.hist.shift();
   if(nd%3===1)genMarket();
   genReqs();
-  if(!S.won&&netWorth()>=GOAL){S.won=true;log(`Obiettivo raggiunto al giorno ${nd}!`,'hdr')}
+  checkMilestones(nd);
   if(S.cash<-3000){S.lost=true;log('Fallimento: la banca ha chiuso i conti.','bad')}
 }

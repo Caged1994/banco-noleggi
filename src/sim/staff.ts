@@ -8,6 +8,7 @@
 // - Livelli 0–5 per ruolo: si sale con l'esperienza (tempo di lavoro) o con un corso.
 //   A ogni livello chiede un aumento: se rifiuti diventa scontento e può andarsene.
 // - Malattie rare (mai nei primi 60 giorni, al massimo 14 giorni), 10 giorni di ferie l'anno per i fissi.
+import { STAFF_BONUS } from '../data/goals.js';
 import { S } from '../core/state.js';
 import { dateOf, dshort, isSun } from '../core/calendar.js';
 import { R, RI, clamp, eur, pick, wpick } from '../core/util.js';
@@ -19,6 +20,8 @@ import {
 } from '../data/staffdata.js';
 import { log, money } from './ledger.js';
 
+// dalla prima tappa si possono assumere più dipendenti
+export const maxStaff = () => MAX_STAFF + ((S.ms || 0) >= 1 ? STAFF_BONUS : 0);
 export const PLAYER_TIME = 12;
 
 // --- lettura dello stato di un dipendente
@@ -158,7 +161,7 @@ export const canHireAs = (c, contract: string) => (contract === 'fisso' ? c.want
 // contract: 'fisso' oppure 'stagionale'; months: durata dello stagionale (1–3)
 export function hire(id, role: string, contract: string, months = 2) {
   const c = S.cands.find((x) => x.id === id);
-  if (!c || S.staff.length >= MAX_STAFF) return null;
+  if (!c || S.staff.length >= maxStaff()) return null;
   role = c.trained ? c.role : role;
   if (!ROLES[role] || !canHireAs(c, contract)) return null;
   const doy = dateOf(S.day).doy;

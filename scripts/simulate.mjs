@@ -53,6 +53,7 @@ const ST = await mod('sim/staff.js');
 const CR = await mod('sim/crew.js');
 const SD = await mod('data/staffdata.js');
 const IN = await mod('sim/incidents.js');
+const LG = await mod('sim/ledger.js');
 const incCount = {};
 const hint = (c, role) => SD.BIO_ROLE[role].some((t) => c.bio.includes(t));
 // Il bot assume secondo la flotta: lavaggista da 5 auto, addetto ai rientri da 6, venditore da 8, box e meccanico da 8 con la cassa.
@@ -99,7 +100,7 @@ for (let g = 1; g <= games; g++) {
   let S = st.S;
   for (const k of Object.keys(S.prices)) S.prices[k] = Math.round(S.prices[k] * priceMul);
   const perMonth = {};
-  let bought = 0, occ = 0, occDays = 0, minCash = Infinity, day100 = null, staffMax = 0;
+  let bought = 0, occ = 0, occDays = 0, minCash = Infinity, day100 = null, staffMax = 0, nwY1 = null;
   const idle = {};
   for (let i = 0; i < days && !S.lost; i++) {
     const m = dateOf(S.day).m;
@@ -146,7 +147,7 @@ for (let g = 1; g <= games; g++) {
       if ((c.cond < 60 || visiblyDamaged(c)) && !CR.mechDo('repair', c, true) && S.cash > repairCost(c) + 800) repair(c.id);
     }
     const offer = S.market.filter((o) => o.dealer === 'gino' || o.dealer === 'flotte').sort((a, b) => a.price - b.price)[0];
-    if (offer && S.cash > offer.price + 4000 && S.fleet.length < Number(process.env.FLEET_MAX ?? 14)) { buyUsed(offer.id); bought++; }
+    if (offer && S.cash > offer.price + Math.max(4000, LG.weeklyCosts() * 1.5) && S.fleet.length < Number(process.env.FLEET_MAX ?? 14)) { buyUsed(offer.id); bought++; }
 
     occ += S.fleet.filter((c) => c.bookings.some((b) => b.st === 'out' && b.start <= S.day && S.day < b.end)).length / S.fleet.length; occDays++;
     nextDay();
@@ -154,6 +155,7 @@ for (let g = 1; g <= games; g++) {
     for (const t of S.todayInc || []) { const k = t.split(/[: ]/)[0]; incCount[k] = (incCount[k] || 0) + 1; }
     minCash = Math.min(minCash, S.cash);
     if (day100 === null && netWorth() >= 100000) day100 = S.day;
+    if (S.day === 366) nwY1 = netWorth();
     check(S);
   }
   const demand = Object.entries(perMonth).map(([m, v]) => `${MSHORT[m]} ${(v.req / v.days).toFixed(1)}`).join(' · ');
@@ -166,6 +168,7 @@ for (let g = 1; g <= games; g++) {
   const inY = S.reports.reduce((a, r) => a + r.totIn, 0), svcY = S.reports.reduce((a, r) => a + (r.inc.svc || 0), 0), dmgY = S.reports.reduce((a, r) => a + (r.inc.damage || 0) + (r.inc.interior || 0), 0);
   console.log(`  personale: ${S.staff.map((e) => `${SD.ROLES[e.role].nome.toLowerCase()} liv.${ST.lvOf(e)}`).join(', ') || 'nessuno'} · massimo ${staffMax} · ultime 12 settimane: entrate €${Math.round(inY)} (servizi €${Math.round(svcY)}, danni €${Math.round(dmgY)}), stipendi €${Math.round(wagesY)}, officina €${Math.round(repY)}, lavaggi €${Math.round(washY)}${S.box.own ? ' · box officina' : ''}`);
   console.log(`  auto fuori a noleggio in media: ${Math.round(occ / occDays * 100)}% · cassa minima €${Math.round(minCash)} · obiettivo €100.000 ${day100 ? 'raggiunto il giorno ' + day100 : 'non raggiunto'}`);
+  console.log(`  traguardi: ${S.ms || 0} · tasse pagate €${Math.round(S.stats.tax || 0)}${S.loans.some((l) => l.tax) ? ' (in parte rateizzate)' : ''} · affitto attuale €${LG.rentWeek()}/sett.${nwY1 != null && S.day > 400 ? ` · patrimonio a fine anno 1 €${nwY1}` : ''}`);
   const tiers = { fedele: 0, abituale: 0, nuovo: 0, perso: 0 };
   for (const c of S.clients) tiers[tierOf(c)]++;
   const back = S.reports.reduce((a, r) => a + (r.clBack || 0), 0);

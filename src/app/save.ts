@@ -2,7 +2,7 @@ import { initMaint } from '../sim/maintenance.js';
 import { newRival } from '../sim/rival.js';
 import { SAVE, SVC } from '../data/catalog.js';
 import { S, ui, setState } from '../core/state.js';
-import { newGame } from '../sim/game.js';
+import { netWorth, newGame } from '../sim/game.js';
 import { migrateStaff } from '../sim/staff.js';
 import { loadTab } from '../ui/tabs.js';
 import { genMarket } from '../sim/market.js';
@@ -23,6 +23,8 @@ export function start(data){
   migrateStaff();
   if(!S.spare)S.spare={};
   if(!S.todayInc)S.todayInc=[];
+  if(S.ms==null)S.ms=S.won?1:0;
+  if(S.nwYear==null)S.nwYear=netWorth();
   S.ins.forEach(it=>{if(!it.dmgs){it.dmgs=it.dmg?[it.dmg]:[];delete it.dmg}});
   ui.tab=ui.tab||loadTab();
   if(S.market.some(m=>!m.dealer))genMarket();

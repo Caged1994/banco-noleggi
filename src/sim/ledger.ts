@@ -1,6 +1,7 @@
 import { S } from '../core/state.js';
 import { clamp } from '../core/util.js';
-import { INSUR_W, OFFICE_W } from '../data/catalog.js';
+import { INSUR_W } from '../data/catalog.js';
+import { RENT_TIERS } from '../data/goals.js';
 import { loanWeekly } from './bank.js';
 export function log(txt,kind='info'){S.log.unshift({d:S.day,txt,kind});S.log.length=Math.min(S.log.length,150)}
 // tag: rent, svc, extra, sell (entrate) · fixed, repair, wash, refund, buy (uscite)
@@ -13,5 +14,9 @@ export const wkSvc=s=>S.wk.svc[s]||(S.wk.svc[s]={prop:0,acc:0,req:0,inc:0});
 export function rep(n){S.rep=clamp(S.rep+n,0,100)}
 export const wages=()=>S.staff.reduce((a,x)=>a+x.wage,0);
 export const insurWeek=()=>S.fleet.reduce((a,c)=>a+INSUR_W[c.cat],0);
-export const weeklyCosts=()=>OFFICE_W+insurWeek()+wages()+(S.loans?loanWeekly():0);
+export const rentFor=(n:number)=>RENT_TIERS.find(t=>n<=t.max).w;
+export const rentWeek=()=>rentFor(S.fleet.length);
+// prossimo scaglione dell'affitto: da quante auto e quanto
+export const nextRent=()=>{const i=RENT_TIERS.findIndex(t=>S.fleet.length<=t.max);return i<RENT_TIERS.length-1?{at:RENT_TIERS[i].max+1,w:RENT_TIERS[i+1].w}:null};
+export const weeklyCosts=()=>rentWeek()+insurWeek()+wages()+(S.loans?loanWeekly():0);
 export const daysToSunday=()=>(7-((S.day-1)%7)-1);

@@ -13,7 +13,10 @@ import { includedSvc, svcBlock, svcPrice } from '../sim/services.js';
 import { miniStrip, renderDesk, renderIns, svcChips } from './banco.js';
 import { STOCK, repairEnd, canRepair, canSell, curBooking, dmgLabel, dmgRepairCost, freeNow, nextBooking, openDmgs, repairCost, repairDays, sellPrice, wearCost } from '../sim/fleet.js';
 import { renderPlan } from './planning.js';
-import { renderBank } from './manage.js';
+import { renderBank, renderGoals } from './manage.js';
+import { msReached, nextMilestone } from '../sim/progress.js';
+import { MILESTONES } from '../data/goals.js';
+import { nextRent } from '../sim/ledger.js';
 import { renderCrew, renderTeam } from './team.js';
 import { boxValue, bestSeller, inHouse, mechRepairCost, mechSvcCost, mechTireCost } from '../sim/crew.js';
 import { PROPOSE_T } from '../sim/services.js';
@@ -48,9 +51,9 @@ export function render(){
     <div class="stat"><span class="lbl">Reputazione</span><b>${Math.round(S.rep)}<small style="font-size:14px;color:var(--muted)">/100</small></b><div class="repbar"><i style="width:${S.rep}%"></i></div></div>
     <div class="stat"><span class="lbl">Oggi</span><b>${wdd(S.day)}</b></div>
     <div class="stat"><span class="lbl">Incasso servizi</span><b>${eur(S.stats.svc)}</b><span class="lbl" style="letter-spacing:.04em">${S.stats.rented} noleggi</span></div>`;
-  const nw=netWorth(),pct=clamp(nw/GOAL*100,0,100);
-  document.getElementById('goal').innerHTML=`<span class="lbl" title="Cassa ${eur(S.cash)} + flotta ${eur(fleetValue())}${boxValue()?` + box officina ${eur(boxValue())}`:''} − debiti ${eur(debt())}">Patrimonio netto ${eur(nw)} / ${eur(GOAL)}</span><div class="track"><i style="width:${pct}%"></i></div><span class="num" style="font-size:13px">${Math.round(pct)}%</span>${spark()}`;
-  document.getElementById('banner').innerHTML=S.lost?`<div class="banner lose">Fallimento al giorno ${S.day}. La cassa è scesa sotto ${eur(-3000)}. Premi «Nuova partita» per riprovare.</div>`:S.won?`<div class="banner win">Obiettivo raggiunto! Puoi continuare a giocare per far crescere la flotta.</div>`:'';
+  const nw=netWorth(),nm0=nextMilestone(),allDone=msReached()>=MILESTONES.length,pct=clamp(nw/nm0.nw*100,0,100);
+  document.getElementById('goal').innerHTML=`<span class="lbl" title="Cassa ${eur(S.cash)} + flotta ${eur(fleetValue())}${boxValue()?` + box officina ${eur(boxValue())}`:''} − debiti ${eur(debt())}">Patrimonio netto ${eur(nw)}${allDone?' · tutti i traguardi raggiunti':` / ${eur(nm0.nw)} · ${nm0.nome}`}</span><div class="track"><i style="width:${pct}%"></i></div><span class="num" style="font-size:13px">${Math.round(pct)}%</span>${spark()}`;
+  document.getElementById('banner').innerHTML=S.lost?`<div class="banner lose">Fallimento al giorno ${S.day}. La cassa è scesa sotto ${eur(-3000)}. Premi «Nuova partita» per riprovare.</div>`:msReached()&&S.day-(S.msDay??-99)<7?(m=>`<div class="banner win">Traguardo «${m.nome}» raggiunto! ${m.unlock}${m.soon?' (In arrivo in un prossimo aggiornamento.)':''}${allDone?'':` Prossimo: «${nm0.nome}» a ${eur(nm0.nw)}.`}</div>`)(MILESTONES[msReached()-1]):'';
 
   // richieste
   document.getElementById('reqcount').textContent=S.reqs.length?S.reqs.length+' in attesa · rispondi entro stasera':'';
@@ -122,6 +125,7 @@ export function render(){
   renderClients();
   document.getElementById('backempty').innerHTML=!S.ins.length&&!S.desk.length?'<div class="panel-h"><h2>Rientri e ritiri</h2></div><div class="empty">Nessun rientro da ispezionare e nessun ritiro da risolvere.</div>':'';
   renderBank();
+  renderGoals();
   renderReport();
 
   // listino
@@ -142,7 +146,8 @@ export function render(){
   // mercato
   const nm=S.day+(((3-(S.day-1)%3)%3)||3);
   const pmul=carPriceMul(S.day),ptxt=pmul>1.02?`usato caro (+${Math.round((pmul-1)*100)}%)`:pmul<.98?`usato a buon prezzo (−${Math.round((1-pmul)*100)}%)`:'prezzi nella media';
-  document.getElementById('mktnote').textContent=`Nuove offerte ${wdd(nm)} · ${MNAME[dateOf(S.day).m]}: ${ptxt}`;
+  const nr=nextRent();
+  document.getElementById('mktnote').textContent=`Nuove offerte ${wdd(nm)} · ${MNAME[dateOf(S.day).m]}: ${ptxt}${nr&&S.fleet.length+2>=nr.at?` · con la ${nr.at}ª auto l'affitto sale a ${eur(nr.w)}/sett.`:''}`;
   const D=DEALER(ui.dealer)||DEALERS[1];
   const chips=(tipi,label)=>`<span class="lbl">${label}</span><div class="dchips">${DEALERS.filter(x=>tipi.includes(x.tipo)).map(x=>`<button class="dchip ${x===D?'on':''}" data-a="dealer" data-k="${x.id}" aria-pressed="${x===D}">${x.nome}<small>${x.isNew?'sempre aperto':S.market.filter(o=>o.dealer===x.id).length+' offerte'}</small></button>`).join('')}</div>`;
   const offers=D.isNew?CAT_KEYS.map(k=>`<div class="row"><div class="l">${CATS[k].nome} nuova<small>100% · 0 km · nessun danno · assicurazione ${eur(INSUR_W[k])}/sett.</small></div><button data-a="buynew" data-k="${k}" ${S.cash<CATS[k].buy?'disabled':''}>${eur(CATS[k].buy)}</button></div>`).join('')
