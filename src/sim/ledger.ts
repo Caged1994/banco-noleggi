@@ -12,5 +12,6 @@ export function newWeek(){return{no:Math.ceil(S.day/7),start:S.day,rep0:S.rep,in
 export const wkSvc=s=>S.wk.svc[s]||(S.wk.svc[s]={prop:0,acc:0,req:0,inc:0});
 export function rep(n){S.rep=clamp(S.rep+n,0,100)}
 export const wages=()=>S.staff.reduce((a,x)=>a+x.wage,0);
-export const weeklyCosts=()=>OFFICE_W+INSUR_W*S.fleet.length+wages()+(S.loans?loanWeekly():0);
+export const insurWeek=()=>S.fleet.reduce((a,c)=>a+INSUR_W[c.cat],0);
+export const weeklyCosts=()=>OFFICE_W+insurWeek()+wages()+(S.loans?loanWeekly():0);
 export const daysToSunday=()=>(7-((S.day-1)%7)-1);

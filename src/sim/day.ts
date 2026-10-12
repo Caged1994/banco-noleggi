@@ -4,10 +4,10 @@ import { loyal } from './regulars.js';
 import { S, ui } from '../core/state.js';
 import { insClose, newInspection } from './inspection.js';
 import { overSendAway, probSendAway, processPickups } from './pickups.js';
-import { log, money, newWeek, rep, wages } from './ledger.js';
+import { insurWeek, log, money, newWeek, rep, wages } from './ledger.js';
 import { isSun, wdd, workEnd } from '../core/calendar.js';
 import { R, eur } from '../core/util.js';
-import { GOAL, INSUR_W, OFFICE_W } from '../data/catalog.js';
+import { GOAL, OFFICE_W } from '../data/catalog.js';
 import { payLoans } from './bank.js';
 import { missedOpportunity, optionsFor } from './desk.js';
 import { buildReport } from './report.js';
@@ -26,7 +26,7 @@ export function nextDay(){
   log(`Chiusura ${wdd(d)}: entrate ${eur(S.today.in)}, uscite ${eur(S.today.out)}`,'hdr');
   S.today={in:0,out:0};
   if(isSun(d)){
-    const f=OFFICE_W+INSUR_W*S.fleet.length,w=wages();
+    const f=OFFICE_W+insurWeek(),w=wages();
     money(-f,'fixed');if(w)money(-w,'staff');
     log(`Fine settimana: affitto e assicurazioni −${eur(f)}${w?`, stipendi −${eur(w)}`:''}`,'out');
     payLoans();

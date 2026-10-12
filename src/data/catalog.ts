@@ -5,6 +5,8 @@ export const CATS={
   lusso:{nome:'Lusso',base:150,buy:56000,tier:4,models:['Imperiale V6','Sirio Sport']},
   furgone:{nome:'Furgone 9 posti',base:75,buy:24000,tier:0,models:['Cargo 9','Navetta L2']},
 };
+// Assicurazione della flotta, a settimana per auto: circa l'11% del prezzo d'acquisto all'anno.
+export const INSUR_W={utilitaria:25,berlina:40,suv:60,furgone:55,lusso:120};
 export const CAT_KEYS=['utilitaria','berlina','suv','lusso','furgone'];
 // servizi, tutti al giorno. std = prezzo che i clienti considerano normale.
 // Upgrade, seggiolino, seconda guida e GPS hanno un prezzo fisso uguale per ogni auto; l'assicurazione ha un prezzo fisso per tipo di veicolo
@@ -51,7 +53,7 @@ export const SURN=['Rossi','Bianchi','Esposito','Ferrari','Greco','Conti','Marin
   'Caruso','De Luca','Mancini','Leone','Longo','Martinelli','Vitale','Serra','Coppola','De Santis','Fabbri','Ferraro','Galli','Marchetti','Monti','Pellegrini','Villa','Cattaneo','Bassi','Sartori',
   'Lo Russo','Di Stefano','Cuomo','Amato','Parisi','Messina','Orlando','Palumbo','Gentile','Sorrentino',
   'Müller','Dubois','Smith','Tanaka','García','Schmidt','Martin','Johnson','Nakamura','Fernández','Kowalski','Andersson','Novak','Papadopoulos','Silva','Yilmaz','Ivanova','O\'Brien','Van Dijk','Haddad'];
-export const GOAL=100000, OFFICE_W=420, INSUR_W=35, CLEAN=15, QUICKWASH=20, SEAT_COST=80, GPS_COST=120, H=14, SAVE='banco-noleggi-v9';
+export const GOAL=100000, OFFICE_W=420, CLEAN=15, QUICKWASH=20, SEAT_COST=80, GPS_COST=120, H=14, SAVE='banco-noleggi-v9';
 // zone dello schema auto vista dall'alto (viewBox 200×320)
 export const ZONES={
   front:{nome:'Paraurti anteriore',x:52,y:14,w:96,h:24},

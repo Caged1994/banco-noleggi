@@ -5,7 +5,7 @@ import { S, ui } from '../core/state.js';
 import { clamp, eur, svcNames } from '../core/util.js';
 import { MNAME, dateOf, dshort, isWE, wdd, workEnd } from '../core/calendar.js';
 import { netWorth } from '../sim/game.js';
-import { FRANCHIGIA, CATS, CAT_KEYS, CLEAN, CLEAN_INT, DMG_CAT, DMG_KEYS, DMG_TYPES, FIXED_SVC, GOAL, KASKO, PRE_DISC, REPAIR_SHARE, SVC, SVC_KEYS, TYPES, dmgCost, zn } from '../data/catalog.js';
+import { FRANCHIGIA, INSUR_W, CATS, CAT_KEYS, CLEAN, CLEAN_INT, DMG_CAT, DMG_KEYS, DMG_TYPES, FIXED_SVC, GOAL, KASKO, PRE_DISC, REPAIR_SHARE, SVC, SVC_KEYS, TYPES, dmgCost, zn } from '../data/catalog.js';
 import { debt, fleetValue } from '../sim/bank.js';
 import { condColor, spark } from './common.js';
 import { carRate, obOptions, optionsFor, selectedCar } from '../sim/desk.js';
@@ -145,8 +145,8 @@ export function render(){
   document.getElementById('mktnote').textContent=`Nuove offerte ${wdd(nm)} · ${MNAME[dateOf(S.day).m]}: ${ptxt}`;
   const D=DEALER(ui.dealer)||DEALERS[1];
   const chips=(tipi,label)=>`<span class="lbl">${label}</span><div class="dchips">${DEALERS.filter(x=>tipi.includes(x.tipo)).map(x=>`<button class="dchip ${x===D?'on':''}" data-a="dealer" data-k="${x.id}" aria-pressed="${x===D}">${x.nome}<small>${x.isNew?'sempre aperto':S.market.filter(o=>o.dealer===x.id).length+' offerte'}</small></button>`).join('')}</div>`;
-  const offers=D.isNew?CAT_KEYS.map(k=>`<div class="row"><div class="l">${CATS[k].nome} nuova<small>100% · 0 km · nessun danno</small></div><button data-a="buynew" data-k="${k}" ${S.cash<CATS[k].buy?'disabled':''}>${eur(CATS[k].buy)}</button></div>`).join('')
-    :(S.market.filter(o=>o.dealer===D.id).map(m=>`<div class="row"><div class="l">${m.model} <small>${CATS[m.cat].nome} · ${m.cond}% · ${m.km.toLocaleString('it-IT')} km${m.dmgN?` · ${m.dmgN} dann${m.dmgN>1?'i':'o'} dichiarat${m.dmgN>1?'i':'o'}`:' · nessun danno dichiarato'}</small></div><button data-a="buyused" data-id="${m.id}" ${S.cash<m.price?'disabled':''}>${eur(m.price)}</button></div>`).join('')||`<div class="row"><div class="l"><small>${D.nome} ha venduto tutto. Torna ${wdd(nm)}.</small></div></div>`);
+  const offers=D.isNew?CAT_KEYS.map(k=>`<div class="row"><div class="l">${CATS[k].nome} nuova<small>100% · 0 km · nessun danno · assicurazione ${eur(INSUR_W[k])}/sett.</small></div><button data-a="buynew" data-k="${k}" ${S.cash<CATS[k].buy?'disabled':''}>${eur(CATS[k].buy)}</button></div>`).join('')
+    :(S.market.filter(o=>o.dealer===D.id).map(m=>`<div class="row"><div class="l">${m.model} <small>${CATS[m.cat].nome} · ${m.cond}% · ${m.km.toLocaleString('it-IT')} km · assicurazione ${eur(INSUR_W[m.cat])}/sett.${m.dmgN?` · ${m.dmgN} dann${m.dmgN>1?'i':'o'} dichiarat${m.dmgN>1?'i':'o'}`:' · nessun danno dichiarato'}</small></div><button data-a="buyused" data-id="${m.id}" ${S.cash<m.price?'disabled':''}>${eur(m.price)}</button></div>`).join('')||`<div class="row"><div class="l"><small>${D.nome} ha venduto tutto. Torna ${wdd(nm)}.</small></div></div>`);
   document.getElementById('market').innerHTML=
     (ui.mktMsg?`<div class="banner ${ui.mktMsg.kind}" role="status" style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start;font-size:13px"><span>${ui.mktMsg.txt}</span><button data-a="mmsg" aria-label="Chiudi messaggio" style="padding:4px 8px">✕</button></div>`:'')
     +chips(['usato'],'Usato')+chips(['nuovo','seminuovo','prestige'],'Autosaloni')
